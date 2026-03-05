@@ -35,14 +35,15 @@ class SmartRAGRetriever:
 
         # 这是一个精心设计的 Prompt (提示词工程)
         prompt = f"""
-        你是一个计算机课程的专业助教。用户的提问比较口语化，请将其转化为 {n} 个最可能出现在计算机专业教材目录中的标准术语或短语。
+        你是一个计算机课程的专业助教。用户的提问比较口语化，请将其转化为 {n} 个最可能出现在计算机专业教材目录中的标准中文术语或中文短语。
 
         用户提问: "{user_query}"
 
         要求:
-        1. 只输出这 {n} 个术语，用英文逗号分隔。
+        1. 只输出这 {n} 个中文术语，用英文逗号分隔。
         2. 不要包含任何解释、序号或多余的文字。
         3. 术语要精准、学术化。
+        4. 遇到时间类（如第几周）或章节类（如1.1.1、1.1、1）这种请完整保存用户输入
 
         示例输入: "python怎么入门"
         示例输出: Python语言概述,程序设计基本方法,开发环境配置
@@ -178,6 +179,6 @@ if __name__ == "__main__":
     searcher = SmartRAGRetriever(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, llm_model="qwen2")
 
     # 测试案例
-    searcher.process_query("Python怎么入门呀？")
+    searcher.process_query("【第3周】基本数据类型的基础知识点有哪些？")
 
     searcher.close()

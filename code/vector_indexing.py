@@ -36,7 +36,7 @@ class VectorIndexer:
             # 第一步：查找所有还没有向量数据的 Concept 节点
             # 这种 WHERE IS NULL 的写法可以支持断点续传
             logger.info("🔍 正在查询数据库中需要向量化的节点...")
-            result = session.run("MATCH (n:Concept) RETURN n.name AS name")
+            result = session.run("MATCH (n:Concept) WHERE n.embedding IS NULL RETURN n.name AS name")
             nodes = [record["name"] for record in result]
 
             count = len(nodes)
