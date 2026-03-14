@@ -1,0 +1,17 @@
+[
+    {
+        "id": "Q001",
+        "type": "micro",
+        "question": "请给我介绍一下Python中的Random库与其使用方法？"
+    },
+    {
+        "id": "Q002",
+        "type": "macro",
+        "question": "请综合阐述一下Python中基本数据类型有哪些与其具体操作方法？"
+    },
+    {
+        "id": "Q003",
+        "type": "mixed",
+        "question": "Python中函数的定义是什么？其代码实现是怎么样的?详细介绍一下：PyInstaller库的使用"
+    }
+]
