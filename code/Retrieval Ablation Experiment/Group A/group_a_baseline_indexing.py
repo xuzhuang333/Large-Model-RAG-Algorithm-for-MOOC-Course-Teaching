@@ -1,8 +1,16 @@
 import os
 import re
+import sys
 import logging
 from neo4j import GraphDatabase
 from sentence_transformers import SentenceTransformer
+
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(CURRENT_DIR)
+if PARENT_DIR not in sys.path:
+    sys.path.append(PARENT_DIR)
+
+from shared_retrieval_utils import GROUP_RESOURCE_NAMES, load_runtime_config
 
 # English logs and comments as explicitly requested
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -28,25 +36,27 @@ class BaselineIndexerV3:
         Ensures a completely clean slate for the new experiment.
         """
         logger.info("Purging all existing BaselineChunk data from Neo4j...")
+        index_name = GROUP_RESOURCE_NAMES["A"]["index_name"]
         with self.driver.session() as session:
             session.run("MATCH (c:BaselineChunk) DETACH DELETE c")
-            session.run("DROP INDEX baseline_chunk_vector_index IF EXISTS")
+            session.run(f"DROP INDEX {index_name} IF EXISTS")
         logger.info("Database purge completed successfully.")
 
     def create_vector_index(self):
         """Creates the isolated vector index for Group A."""
-        logger.info("Creating baseline_chunk_vector_index...")
+        index_name = GROUP_RESOURCE_NAMES["A"]["index_name"]
+        logger.info(f"Creating {index_name}...")
         with self.driver.session() as session:
             query = """
-            CREATE VECTOR INDEX baseline_chunk_vector_index IF NOT EXISTS
+            CREATE VECTOR INDEX {index_name} IF NOT EXISTS
             FOR (c:BaselineChunk)
             ON (c.embedding)
-            OPTIONS {indexConfig: {
+            OPTIONS {{indexConfig: {{
              `vector.dimensions`: 512,
              `vector.similarity_function`: 'cosine'
-            }}
+            }}}}
             """
-            session.run(query)
+            session.run(query.format(index_name=index_name))
         logger.info("Vector index created.")
 
     def clean_srt_text(self, raw_text):
@@ -154,22 +164,33 @@ class BaselineIndexerV3:
         logger.info("Insertion complete.")
 
 if __name__ == "__main__":
-    NEO4J_URI = "bolt://localhost:7687"
-    NEO4J_USER = "neo4j"
-    NEO4J_PASSWORD = "12345678"  # Please verify your password
+    runtime_cfg = load_runtime_config(
+        default_uri="bolt://localhost:7687",
+        default_user="neo4j",
+        default_password="12345678",
+    )
 
     # Update this to your actual root dataset directory
-    DATASET_ROOT = r"E:\graduate_project\reference material\Python语言程序设计_北京理工大学"
+    DATASET_ROOT = os.getenv(
+        "DATASET_ROOT",
+        r"E:\graduate_project\reference material\Python语言程序设计_北京理工大学",
+    )
     
     # Universal Filter Design: Set to None when you want to process ALL weeks.
-    TARGET_WEEK_FILTER = "【第1周】Python基本语法元素"
+    target_week_filter = os.getenv("TARGET_WEEK_FILTER", "【第1周】Python基本语法元素")
+    if target_week_filter.strip().lower() in {"none", "all", "*", ""}:
+        target_week_filter = None
 
-    indexer = BaselineIndexerV3(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
+    indexer = BaselineIndexerV3(
+        runtime_cfg.neo4j_uri,
+        runtime_cfg.neo4j_user,
+        runtime_cfg.neo4j_password,
+    )
     
     try:
         indexer.clear_database_and_index()
         indexer.create_vector_index()
-        indexer.process_physical_directory(DATASET_ROOT, target_filter=TARGET_WEEK_FILTER)
+        indexer.process_physical_directory(DATASET_ROOT, target_filter=target_week_filter)
         logger.info("🎉 Group A Baseline Indexing (V3) successfully finished!")
     finally:
         indexer.close()
