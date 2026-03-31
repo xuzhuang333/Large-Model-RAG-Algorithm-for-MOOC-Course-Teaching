@@ -1,0 +1,23 @@
+import os
+from openai import OpenAI
+
+# 确认这里写的是 "ARK_API_KEY"，不是别的名字
+api_key = os.environ.get("ARK_API_KEY")
+
+# 【调试用】可以临时加一行打印，看看能不能读到值
+print("调试：读到的API Key是：", api_key)
+
+client = OpenAI(
+    api_key=api_key,
+    base_url="https://ark.cn-beijing.volces.com/api/v3",
+)
+# 测试调用，替换为你对应场景的Endpoint ID
+completion = client.chat.completions.create(
+    model="ep-20260327213054-gpbl2", # 例：ep-20260327-xxxxxx
+    messages=[{"role": "user", "content": "你好，测试一下模型调用是否成功,用最少的TOKEN"}],
+    temperature=0.7,
+    max_tokens=512
+)
+
+# 打印结果，有输出就代表创建&调用完全成功
+print(completion.choices[0].message.content)
