@@ -1,0 +1,119 @@
+{
+  "metadata": {
+    "dry_run": false,
+    "lookback_window_size": 50,
+    "global_anchor_layer": 2,
+    "llm_score_threshold": 6,
+    "cognitive_decay_threshold": 33,
+    "llm_model": "ep-20260327213054-gpbl2",
+    "node_count": 211,
+    "cleared_existing_edges": 0,
+    "written_requires": 13,
+    "written_needs_review": 0,
+    "prune_stats": {
+      "raw_edges": 25,
+      "forward_edges": 25,
+      "dropped_short_transitive": 12,
+      "mutated_to_needs_review": 0,
+      "kept_requires": 13
+    }
+  },
+  "cypher_templates": {
+    "clear_old_edges": "MATCH (:GroupC_SyllabusNode)-[r:GROUP_C_REQUIRES|GROUP_C_NEEDS_REVIEW]->(:GroupC_SyllabusNode) DELETE r",
+    "write_requires": "MERGE (a)-[:GROUP_C_REQUIRES]->(b)",
+    "write_needs_review": "MERGE (a)-[:GROUP_C_NEEDS_REVIEW]->(b)"
+  },
+  "edges": [
+    {
+      "source_id": "GC_SYL_341edd89f44b1978c0ced997",
+      "target_id": "GC_SYL_6efeb1f5fe9906b5589f90c0",
+      "edge_type": "REQUIRES",
+      "llm_score": 9.0,
+      "reason": "程序的基本编写方法是编程实践的直接前提"
+    },
+    {
+      "source_id": "GC_SYL_47d09c7e5e35d6f7cf74eab4",
+      "target_id": "GC_SYL_36ecbd54ccd11c7e83d1f6b9",
+      "edge_type": "REQUIRES",
+      "llm_score": 9.0,
+      "reason": "包含Python语言概述，是本小结中历史与名称的详细来源"
+    },
+    {
+      "source_id": "GC_SYL_4c8e05017bd662a7bbbed56e",
+      "target_id": "GC_SYL_36ecbd54ccd11c7e83d1f6b9",
+      "edge_type": "REQUIRES",
+      "llm_score": 10.0,
+      "reason": "包含程序编写与运行实践，是本小结中三个小程序实践的直接来源"
+    },
+    {
+      "source_id": "GC_SYL_508d1030211ce19d424fa4f5",
+      "target_id": "GC_SYL_69d7bb57d3370f11a2d44d96",
+      "edge_type": "REQUIRES",
+      "llm_score": 9.0,
+      "reason": "编译和解释的深入理解是编写方法的前提"
+    },
+    {
+      "source_id": "GC_SYL_69d7bb57d3370f11a2d44d96",
+      "target_id": "GC_SYL_6efeb1f5fe9906b5589f90c0",
+      "edge_type": "REQUIRES",
+      "llm_score": 9.0,
+      "reason": "程序的基本编写方法是编程实践的直接前提"
+    },
+    {
+      "source_id": "GC_SYL_6b1bb5c08c0b9e032e36dbc1",
+      "target_id": "GC_SYL_508d1030211ce19d424fa4f5",
+      "edge_type": "REQUIRES",
+      "llm_score": 9.0,
+      "reason": "直接介绍计算机与程序设计，是编译解释的基础"
+    },
+    {
+      "source_id": "GC_SYL_6efeb1f5fe9906b5589f90c0",
+      "target_id": "GC_SYL_37cbe859aff5851b28239643",
+      "edge_type": "REQUIRES",
+      "llm_score": 10.0,
+      "reason": "直接讲解计算机编程的价值与意义，是核心前置知识"
+    },
+    {
+      "source_id": "GC_SYL_86622f75be6dfe04dd0d5da3",
+      "target_id": "GC_SYL_3692228d0ab31156b6c22aaf",
+      "edge_type": "REQUIRES",
+      "llm_score": 10.0,
+      "reason": "当前节点是本章开篇，直接依赖上一节内容"
+    },
+    {
+      "source_id": "GC_SYL_86622f75be6dfe04dd0d5da3",
+      "target_id": "GC_SYL_508d1030211ce19d424fa4f5",
+      "edge_type": "REQUIRES",
+      "llm_score": 8.0,
+      "reason": "程序设计基本方法包含程序执行方式"
+    },
+    {
+      "source_id": "GC_SYL_a42aabb981cd7985d3c758fb",
+      "target_id": "GC_SYL_4c8e05017bd662a7bbbed56e",
+      "edge_type": "REQUIRES",
+      "llm_score": 8.0,
+      "reason": "Python开发环境配置是运行程序的基础"
+    },
+    {
+      "source_id": "GC_SYL_a42aabb981cd7985d3c758fb",
+      "target_id": "GC_SYL_d7e43f70a1b891543a433a87",
+      "edge_type": "REQUIRES",
+      "llm_score": 10.0,
+      "reason": "直接对应本单元主题，是理解当前开篇内容的必要前置"
+    },
+    {
+      "source_id": "GC_SYL_d7e43f70a1b891543a433a87",
+      "target_id": "GC_SYL_36ecbd54ccd11c7e83d1f6b9",
+      "edge_type": "REQUIRES",
+      "llm_score": 8.0,
+      "reason": "本单元开篇，介绍了单元学习目标"
+    },
+    {
+      "source_id": "GC_SYL_ff5b73d60f5e589c5ddd167f",
+      "target_id": "GC_SYL_508d1030211ce19d424fa4f5",
+      "edge_type": "REQUIRES",
+      "llm_score": 10.0,
+      "reason": "同一节点，完全必需"
+    }
+  ]
+}
