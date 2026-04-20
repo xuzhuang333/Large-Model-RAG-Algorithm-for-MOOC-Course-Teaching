@@ -1,0 +1,36 @@
+[
+  {
+    "id": "SC001",
+    "eval_set": "Set-C",
+    "type": "mixed",
+    "question": "",
+    "user_id": "",
+    "current_turn": null,
+    "qa_score": null,
+    "current_struggle": null,
+    "required_concepts": [],
+    "supporting_facts": [],
+    "hard_negative_pairs": [
+      {
+        "concept_a": "",
+        "concept_b": "",
+        "expected_key_difference": ""
+      }
+    ],
+    "trajectory_id": "",
+    "turn_id": null,
+    "persona": "",
+    "expected_route": "",
+    "noise_profile": "none",
+    "gold_answer_points": [],
+    "max_hop": 2,
+    "tags": [],
+    "golden_parent_syllabus_ids": [],
+    "golden_sources": [],
+    "ground_truth": "",
+    "candidate_reference_materials": [],
+    "split": "",
+    "difficulty": "",
+    "notes": ""
+  }
+]

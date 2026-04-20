@@ -1,0 +1,30 @@
+[
+  {
+    "id": "SD001_T01",
+    "eval_set": "Set-D",
+    "type": "mixed",
+    "question": "",
+    "user_id": "U001",
+    "current_turn": 1,
+    "qa_score": null,
+    "current_struggle": null,
+    "required_concepts": [],
+    "supporting_facts": [],
+    "hard_negative_pairs": [],
+    "trajectory_id": "TRJ001",
+    "turn_id": 1,
+    "persona": "forgetting",
+    "expected_route": "",
+    "noise_profile": "none",
+    "gold_answer_points": [],
+    "max_hop": 2,
+    "tags": [],
+    "golden_parent_syllabus_ids": [],
+    "golden_sources": [],
+    "ground_truth": "",
+    "candidate_reference_materials": [],
+    "split": "",
+    "difficulty": "",
+    "notes": ""
+  }
+]

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "SF001",
+    "eval_set": "Set-F",
+    "type": "mixed",
+    "question": "",
+    "user_id": "",
+    "current_turn": null,
+    "qa_score": null,
+    "current_struggle": null,
+    "required_concepts": [],
+    "supporting_facts": [],
+    "hard_negative_pairs": [],
+    "trajectory_id": "",
+    "turn_id": null,
+    "persona": "",
+    "expected_route": "",
+    "noise_profile": "none",
+    "gold_answer_points": [],
+    "max_hop": null,
+    "tags": [],
+    "golden_parent_syllabus_ids": [],
+    "golden_sources": [],
+    "ground_truth": "",
+    "candidate_reference_materials": [],
+    "split": "",
+    "difficulty": "",
+    "notes": ""
+  }
+]
