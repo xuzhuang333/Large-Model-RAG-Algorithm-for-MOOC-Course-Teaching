@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from neo4j import GraphDatabase
-
+#这个文件定义了Group B的Leaf Repository类，封装了与Neo4j数据库交互的细节，包括节点的插入、查询和索引管理等操作。这个类是Group B中处理底层数据存储和访问的核心组件，为上层的树构建和摘要生成提供支持。
 
 class GroupBLeafRepository:
     def __init__(

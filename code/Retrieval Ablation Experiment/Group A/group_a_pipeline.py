@@ -4,6 +4,7 @@ import os
 import sys
 from neo4j import GraphDatabase
 from sentence_transformers import SentenceTransformer
+#这个代码文件用于Group A 的整体流程控制，包含了从查询重写、检索、生成到评测的完整闭环。
 
 # 导入通用生成器和裁判
 from llm_generator import RAGGenerator
@@ -191,7 +192,7 @@ def run_group_a_experiment():
         api_key=runtime_cfg.ark_api_key,
     )
 
-    # 注意：确保这里的问题只包含“第1周”的内容！
+    # 当前默认支持全周问题集，不再限制第1周。
     dataset_path = os.getenv("QA_DATASET_PATH", r"E:\graduate_project\code\QAdata\qa_dataset.json")
     annotate_dataset_path = os.getenv(
         "QA_ANNOTATE_DATASET_PATH",

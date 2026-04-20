@@ -5,6 +5,7 @@ import logging
 from neo4j import GraphDatabase
 from sentence_transformers import SentenceTransformer
 
+#这个代码文件用于Group A 的Baseline Indexing，负责从物理目录中提取文本、进行粗暴的硬切分，并将结果存入Neo4j中。这个版本的切分完全不考虑语义边界，旨在展示Baseline方法的局限性。
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PARENT_DIR = os.path.dirname(CURRENT_DIR)
 if PARENT_DIR not in sys.path:
@@ -84,24 +85,17 @@ class BaselineIndexerV3:
             start += (self.chunk_size - self.chunk_overlap)
         return chunks
 
-    def process_physical_directory(self, root_dataset_dir, target_filter=None):
+    def process_physical_directory(self, root_dataset_dir):
         """
         Walks through the physical directory bypassing Neo4j's logical hierarchy.
         This catches ALL .txt, .srt, and .md files (including Level 2 summaries).
         """
         logger.info(f"Scanning physical directory: {root_dataset_dir}")
-        if target_filter:
-            logger.info(f"FILTER ACTIVE: Only processing paths containing '{target_filter}'")
             
         all_chunks_data = []
         processed_files_count = 0
 
         for dirpath, dirnames, filenames in os.walk(root_dataset_dir):
-            # 1. Apply the target filter (e.g., only "Week 1")
-            # This makes the algorithm universal; just pass target_filter=None later to process everything.
-            if target_filter and target_filter not in dirpath:
-                continue
-
             for filename in filenames:
                 file_path = os.path.join(dirpath, filename)
                 extracted_text = ""
@@ -176,11 +170,6 @@ if __name__ == "__main__":
         r"E:\graduate_project\reference material\Python语言程序设计_北京理工大学",
     )
     
-    # Universal Filter Design: Set to None when you want to process ALL weeks.
-    target_week_filter = os.getenv("TARGET_WEEK_FILTER", "【第1周】Python基本语法元素")
-    if target_week_filter.strip().lower() in {"none", "all", "*", ""}:
-        target_week_filter = None
-
     indexer = BaselineIndexerV3(
         runtime_cfg.neo4j_uri,
         runtime_cfg.neo4j_user,
@@ -190,7 +179,7 @@ if __name__ == "__main__":
     try:
         indexer.clear_database_and_index()
         indexer.create_vector_index()
-        indexer.process_physical_directory(DATASET_ROOT, target_filter=target_week_filter)
+        indexer.process_physical_directory(DATASET_ROOT)
         logger.info("🎉 Group A Baseline Indexing (V3) successfully finished!")
     finally:
         indexer.close()

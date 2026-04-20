@@ -2,6 +2,7 @@ import json
 import logging
 import importlib.util
 import os
+import sys
 from neo4j import GraphDatabase
 from sentence_transformers import SentenceTransformer
 
@@ -13,11 +14,18 @@ ABLATION_DIR = os.path.join(PROJECT_ROOT, "Retrieval Ablation Experiment")
 
 def _load_shared_utils_module():
     module_path = os.path.join(ABLATION_DIR, "shared_retrieval_utils.py")
-    spec = importlib.util.spec_from_file_location("shared_retrieval_utils", module_path)
+    module_name = "shared_retrieval_utils"
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
     if spec is None or spec.loader is None:
         raise ImportError(f"Failed to load shared utils from: {module_path}")
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    # Register before execution so decorators like @dataclass can resolve module globals.
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        sys.modules.pop(module_name, None)
+        raise
     return module
 
 

@@ -6,6 +6,8 @@ from functools import lru_cache
 
 from transformers import AutoTokenizer
 
+#这个文件定义了Group B中与文本切分和Token计数相关的工具函数和类，主要用于将文本切分成适合模型输入的块，并统计文本的Token数量。这些工具在Group B的树构建和摘要生成过程中被广泛使用，以确保输入文本符合模型的上下文长度限制，同时尽可能保持语义完整性。
+
 logger = logging.getLogger("GroupB_Chunking")
 
 DEFAULT_BGE_MODEL_NAME = "BAAI/bge-small-zh-v1.5"

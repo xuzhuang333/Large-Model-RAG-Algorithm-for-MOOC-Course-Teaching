@@ -1,3 +1,4 @@
+#这个文件是Group B的Leaf Indexing模块，负责从指定的物理目录中提取文本文件，进行基于句子的智能切分，并将切分后的文本块与其对应的元数据一起存储到Neo4j数据库中。这个模块还支持对SRT字幕文件进行特殊处理，去除时间戳和序号等非文本内容，以获得更干净的文本输入。切分过程中会尽量保持语义完整性，同时也提供了极端情况下的强制切分机制，以确保每个文本块都在模型可接受的Token限制范围内。
 from __future__ import annotations
 
 import hashlib
@@ -34,7 +35,6 @@ SRT_TS_PATTERN = re.compile(r"^\d{2}:\d{2}:\d{2},\d{3}\s+-->\s+\d{2}:\d{2}:\d{2}
 @dataclass
 class GroupBLeafIndexingConfig:
     dataset_root: str
-    target_week_filter: str | None
     token_limit_per_chunk: int = 100
     extreme_force_split_token_cap: int = 400
     embedding_batch_size: int = 64
@@ -51,15 +51,6 @@ class GroupBLeafIndexingConfig:
     summarizer_max_tokens: int = 220
     relationship_type: str = "GROUP_B_PARENT_OF"
     supported_extensions: tuple[str, ...] = (".txt", ".md", ".srt")
-
-
-def normalize_target_filter(raw_value: str | None) -> str | None:
-    if not raw_value:
-        return None
-    lowered = raw_value.strip().lower()
-    if lowered in {"none", "all", "*", ""}:
-        return None
-    return raw_value
 
 
 def parse_supported_extensions(raw_value: str | None) -> tuple[str, ...]:
@@ -125,8 +116,6 @@ def collect_leaf_nodes(
     processed_files = 0
 
     for dirpath, _, filenames in os.walk(config.dataset_root):
-        if config.target_week_filter and config.target_week_filter not in dirpath:
-            continue
 
         for filename in filenames:
             ext = os.path.splitext(filename)[1].lower()
@@ -224,9 +213,6 @@ def build_config_from_env() -> GroupBLeafIndexingConfig:
         "DATASET_ROOT",
         r"E:\graduate_project\reference material\Python语言程序设计_北京理工大学",
     )
-    # Group B default behavior: ingest all weeks unless explicitly filtered.
-    # Use a dedicated env var to avoid accidentally inheriting global Week-1 filters.
-    target_week_filter = normalize_target_filter(os.getenv("GROUP_B_TARGET_WEEK_FILTER"))
 
     token_limit_per_chunk = int(os.getenv("GROUP_B_SENTENCE_CHUNK_TOKEN_LIMIT", "100"))
     extreme_force_split_token_cap = int(
@@ -239,13 +225,18 @@ def build_config_from_env() -> GroupBLeafIndexingConfig:
 
     embedding_batch_size = int(os.getenv("GROUP_B_EMBEDDING_BATCH_SIZE", "64"))
 
-    clear_before_insert = os.getenv("GROUP_B_CLEAR_BEFORE_INSERT", "true").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "y",
-        "on",
-    }
+    legacy_clear_before_insert = os.getenv("GROUP_B_CLEAR_BEFORE_INSERT")
+    if legacy_clear_before_insert and legacy_clear_before_insert.strip().lower() in {
+        "0",
+        "false",
+        "no",
+        "n",
+        "off",
+    }:
+        logger.warning(
+            "GROUP_B_CLEAR_BEFORE_INSERT=%s ignored; clear-before-insert is forced to true for overwrite reruns.",
+            legacy_clear_before_insert,
+        )
 
     build_recursive_tree = os.getenv("GROUP_B_BUILD_RECURSIVE_TREE", "true").strip().lower() in {
         "1",
@@ -283,11 +274,10 @@ def build_config_from_env() -> GroupBLeafIndexingConfig:
 
     return GroupBLeafIndexingConfig(
         dataset_root=dataset_root,
-        target_week_filter=target_week_filter,
         token_limit_per_chunk=token_limit_per_chunk,
         extreme_force_split_token_cap=extreme_force_split_token_cap,
         embedding_batch_size=embedding_batch_size,
-        clear_before_insert=clear_before_insert,
+        clear_before_insert=True,
         build_recursive_tree=build_recursive_tree,
         reduction_dimension=reduction_dimension,
         umap_metric=umap_metric,

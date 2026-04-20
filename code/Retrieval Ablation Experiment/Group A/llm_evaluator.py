@@ -54,7 +54,13 @@ class RAGEvaluator:
         golden_sources = golden_sources or []
         source_alignment_rule = (
             "若 [Golden_Sources] 为空，请将 Source_Alignment 输出为 -1。"
-            "否则请按检索来源与黄金来源的一致性评分（1-5）。"
+            "否则请按检索来源与黄金来源的一致性评分（1-5），并严格使用以下匹配规则："
+            "1) 路径标准化后完全相同，视为命中；"
+            "2) 同一路径仅扩展名不同（.md/.txt/.srt）也视为命中；"
+            "3) 仅当黄金来源是 summary（包含 '#summary' 或 '单元小结'）时，"
+            "允许同单元号匹配（如 3.2.*）；"
+            "4) 若黄金来源不是 summary，仅同单元号不算命中；"
+            "5) 请尽量按一对一匹配统计命中后再做整体评分。"
         )
 
         prompt = f"""
@@ -70,6 +76,7 @@ class RAGEvaluator:
         4. Answer_Relevance: 答案是否直接且有效地解决了问题?
         5. Source_Alignment: 检索来源与黄金来源的一致程度。
            {source_alignment_rule}
+              评分锚点：5=几乎完全一致；4=大部分一致；3=部分一致；2=少量一致；1=基本不一致。
 
         [Question]: {query}
         [Context]: {context}
