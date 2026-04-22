@@ -44,7 +44,7 @@
 | user_id | C | string | U001 | 用户级状态分析 | Set-D 推荐必填；其他 Set 可空 |
 | current_turn | C | integer/null | 3 | 状态阶段分析 | Set-D 推荐；其他 Set 可空 |
 | qa_score | O | number/null | 0.62 | 状态提升、前后对比 | Set-D 推荐；其他 Set 可空 |
-| current_struggle | O | string/null | 指针边界错误 | 状态感知命中率 | Set-D 推荐；其他 Set 可空 |
+| current_struggle | O | number/null | 0.82 | 状态感知命中率 | Set-D 推荐；其他 Set 可空 |
 | persona | O | string | forgetting | 用户画像鲁棒性 | Set-D 推荐；其他 Set 可空 |
 | expected_route | O | string | 先讲先修，再讲目标概念 | 推理路径一致性 | Set-D/C 可选，其余通常不需要 |
 | noise_profile | C | string | none/light/hard | 噪声鲁棒性跌落率 | Set-E 必填；其他 Set 默认 none |
@@ -90,12 +90,32 @@ $env:HF_HOME = "E:\hf_cache"
 $env:HF_HUB_CACHE = "E:\hf_cache\hub"
 $env:SENTENCE_TRANSFORMERS_HOME = "E:\hf_cache\sentence_transformers"
 
-$env:HF_ENDPOINT = "https://hf-mirror.com"
-$env:HF_HOME = "E:\hf_cache"
-$env:HF_HUB_CACHE = "E:\hf_cache\hub"
-$env:SENTENCE_TRANSFORMERS_HOME = "E:\hf_cache\sentence_transformers"
-
 $env:SET_A_ONLY_QID = ""
 $env:SET_A_LIMIT = "0"
 $env:SET_A_RANDOM_SAMPLE_N = "120"
 $env:SET_A_RANDOM_SEED = "42"
+
+## Set-C 自动构建脚本（示例）
+$env:SET_C_TEMPLATE_PATH = "E:\graduate_project\code\QuantEvaluation\Set-C_HardNegative_Discrimination\input_template_set_c.json"
+$env:SET_C_OUTPUT_PATH = "E:\graduate_project\code\QuantEvaluation\Set-C_HardNegative_Discrimination\set_c_auto_generated.json"
+$env:SET_C_MAX_SAMPLES = "120"
+$env:SET_C_MAX_SEED_NODES = "320"
+$env:SET_C_QUERIES_PER_NODE = "2"
+$env:SET_C_TIMEOUT_SEC = "200"
+$env:SET_C_RANDOM_SEED = "42"
+
+python "E:\graduate_project\code\QuantEvaluation\Set-C_HardNegative_Discrimination\build_set_c_dataset_with_group_c_hardneg.py"
+
+## Set-D 自动构建脚本（示例）
+$env:SET_D_SOURCE_SET_A_PATH = "E:\graduate_project\code\QuantEvaluation\Set-A_SingleHop_Factoid\set_a_auto_generated.json"
+$env:SET_D_TEMPLATE_PATH = "E:\graduate_project\code\QuantEvaluation\Set-D_Stateful_Trajectories\input_template_set_d.json"
+$env:SET_D_OUTPUT_PATH = "E:\graduate_project\code\QuantEvaluation\Set-D_Stateful_Trajectories\set_d_auto_generated.json"
+$env:SET_D_MIN_TURNS = "8"
+$env:SET_D_MAX_TURNS = "12"
+$env:SET_D_TARGET_TURNS = "10"
+$env:SET_D_MAX_TRAJECTORIES = "24"
+$env:SET_D_FORGETTING_TRAJECTORIES = "12"
+$env:SET_D_STRUGGLING_TRAJECTORIES = "12"
+$env:SET_D_RANDOM_SEED = "42"
+
+python "E:\graduate_project\code\QuantEvaluation\Set-D_Stateful_Trajectories\build_set_d_trajectories.py"

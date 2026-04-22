@@ -32,7 +32,92 @@ class RAGGenerator:
         self.api_key = api_key or os.getenv("ARK_API_KEY")
         logger.info(f"Initialized Universal Generator with model: {self.model_name}")
 
-    def generate_response(self, query, retrieved_chunks):
+    def _infer_answer_mode(self, query, answer_mode=None):
+        forced = str(answer_mode or "").strip().lower()
+        if forced in {"micro", "macro"}:
+            return forced
+
+        query_text = str(query or "").strip()
+        macro_hints = (
+            "总结",
+            "概述",
+            "整体",
+            "框架",
+            "比较",
+            "区别",
+            "联系",
+            "原理",
+            "流程",
+            "步骤",
+            "为什么",
+            "有哪些",
+            "主要",
+            "核心",
+            "如何理解",
+        )
+        micro_hints = (
+            "是什么",
+            "哪一个",
+            "哪个",
+            "多少",
+            "是否",
+            "定义",
+            "全称",
+            "参数",
+            "返回",
+            "缩写",
+        )
+
+        if any(hint in query_text for hint in macro_hints):
+            return "macro"
+        if any(hint in query_text for hint in micro_hints):
+            return "micro"
+
+        return "micro" if len(query_text) <= 24 else "macro"
+
+    def _build_prompt(self, query, context_str, answer_mode):
+        common_rules = """
+        通用要求：
+        1. 必须且只能基于提供的参考资料进行回答。
+        2. 如果参考资料中没有相关信息，请直接回答“根据现有资料无法回答”。
+        3. 不要添加任何未提供的背景知识或假设。
+        4. 绝对禁止编造信息或过度推测。只能回答参考资料中明确提到的内容。
+        5. 绝对禁止使用任何未提供的外部知识或常识推理。
+        """.strip()
+
+        if answer_mode == "macro":
+            format_rules = """
+            回答模板（macro）：
+            - 先用1句话给出总述。
+            - 再按“要点1/要点2/要点3 ...”分点回答。
+            - 每个要点尽量对应参考资料中的一个清晰事实。
+            - 若证据不足，明确指出“哪一部分资料不足”。
+            """.strip()
+        else:
+            format_rules = """
+            回答模板（micro）：
+            - 首句直接给出结论（尽量短）。
+            - 如需补充，最多补1-2句关键依据。
+            - 不要展开与问题无关的背景介绍。
+            """.strip()
+
+        return f"""
+        你是严谨的计算机课程助教。请阅读参考资料并回答学生问题。
+
+        {common_rules}
+
+        {format_rules}
+
+        【参考资料】:
+        {context_str}
+
+        【学生问题】:
+        {query}
+
+        请回答：
+        """
+
+    def generate_response(self, query, retrieved_chunks, answer_mode=None):
         """
         Generates an answer based STRICTLY on the retrieved context.
         This function will be reused across Group A, B, and C.
@@ -56,27 +141,8 @@ class RAGGenerator:
         if not context_str.strip():
             context_str = "No relevant context found."
 
-        # The Prompt Template (Frozen for A, B, C)
-        prompt = f"""
-        你是略微懂计算机的助教。但很可惜你的天赋不足，这点体现在你的知识库中缺少了用户提问中的50%的相关检索信息。请仔细阅读参考资料，回答学生的问题。
-
-        要求：
-        1. 必须且只能基于提供的参考资料进行回答。
-        2. 如果参考资料中没有相关信息，请直接回答“根据现有资料无法回答”。
-        3. 回答要有逻辑，适当地分点阐述。
-        4. 不要添加任何未提供的背景知识或假设。
-        5. 绝对禁止编造信息或过度推测。只能回答参考资料中明确提到的内容。
-        6. 回答要简洁明了，避免冗长的解释或无关的细节。
-        7. 如果参考资料中信息不足以完整回答问题，可以适当指出哪些部分是缺失的，但不要试图填补这些空白。
-        8. 绝对禁止使用任何未提供的外部知识或常识推理。只能基于提供的参考资料进行回答。
-        【参考资料】:
-        {context_str}
-
-        【学生问题】:
-        {query}
-
-        请回答：
-        """
+        mode = self._infer_answer_mode(query=query, answer_mode=answer_mode)
+        prompt = self._build_prompt(query=query, context_str=context_str, answer_mode=mode)
 
         try:
             # 根据输入长度自适应控制温度和输出 token，兼顾效果与成本

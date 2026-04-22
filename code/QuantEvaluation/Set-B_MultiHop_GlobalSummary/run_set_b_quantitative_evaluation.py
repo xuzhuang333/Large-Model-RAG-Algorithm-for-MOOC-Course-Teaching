@@ -90,6 +90,8 @@ DEFAULT_ARK_API_BASE = shared_utils.DEFAULT_ARK_API_BASE
 DEFAULT_DEEPSEEK_ENDPOINT = shared_utils.DEFAULT_DEEPSEEK_ENDPOINT
 DEFAULT_DOUBAO_ENDPOINT = shared_utils.DEFAULT_DOUBAO_ENDPOINT
 load_runtime_config = shared_utils.load_runtime_config
+ark_chat_completion = shared_utils.ark_chat_completion
+get_adaptive_generation_params = shared_utils.get_adaptive_generation_params
 
 GroupARetriever = group_a_pipeline_mod.GroupARetriever
 _build_context_chunks_with_budget = group_a_pipeline_mod._build_context_chunks_with_budget
@@ -442,6 +444,19 @@ def _compute_source_prf(retrieved_norm: list[str], golden_norm: list[str]) -> di
     }
 
 
+def _compute_source_precision_at_k(
+    ranked_sources_norm: list[str],
+    golden_sources_norm: list[str],
+    k: int,
+) -> float:
+    top_k = ranked_sources_norm[: max(1, int(k))]
+    if not top_k:
+        return 0.0
+
+    matched = _maximum_bipartite_source_matches(top_k, golden_sources_norm)
+    return float(matched / len(top_k))
+
+
 def _ordered_unique_texts(values: list[str]) -> list[str]:
     seen: set[str] = set()
     result: list[str] = []
@@ -454,6 +469,86 @@ def _ordered_unique_texts(values: list[str]) -> list[str]:
         seen.add(text)
         result.append(text)
     return result
+
+
+REFUSAL_CLASS_NON = "non_refusal"
+REFUSAL_CLASS_PARTIAL = "partial_unknown"
+REFUSAL_CLASS_FULL = "full_refusal"
+
+_REFUSAL_MARKERS = [
+    "根据现有资料无法回答",
+    "无法回答",
+    "信息不足",
+    "资料不足",
+    "未提供相关信息",
+    "no relevant context found",
+]
+
+
+def _classify_refusal_answer(answer: str) -> str:
+    text = str(answer or "").strip()
+    if not text:
+        return REFUSAL_CLASS_FULL
+
+    normalized = _normalize_answer_text(text)
+    marker_hits = 0
+    for marker in _REFUSAL_MARKERS:
+        marker_norm = _normalize_answer_text(marker)
+        if marker_norm and marker_norm in normalized:
+            marker_hits += 1
+
+    if marker_hits <= 0:
+        return REFUSAL_CLASS_NON
+
+    residue = text
+    for marker in _REFUSAL_MARKERS:
+        residue = residue.replace(marker, " ")
+    residue = re.sub(r"[，,。！？!?；;：:\n\s]+", " ", residue).strip()
+    residue_norm = _normalize_answer_text(residue)
+
+    has_structured_answer = any(token in text for token in ("要点", "1.", "2.", "3.", "- ", "\n"))
+
+    # If refusal markers dominate and almost no residual content remains, treat as full refusal.
+    if len(residue_norm) <= 8 and not has_structured_answer:
+        return REFUSAL_CLASS_FULL
+    if len(residue_norm) <= 20 and marker_hits > 1 and not has_structured_answer:
+        return REFUSAL_CLASS_FULL
+
+    return REFUSAL_CLASS_PARTIAL
+
+
+def _is_refusal_answer(answer: str) -> bool:
+    return _classify_refusal_answer(answer) == REFUSAL_CLASS_FULL
+
+
+def _concept_covered_strict(answer_norm: str, concept: str) -> bool:
+    concept_norm = _normalize_answer_text(concept)
+    return bool(concept_norm and concept_norm in answer_norm)
+
+
+def _concept_covered_relaxed(answer: str, answer_norm: str, concept: str, match_f1_threshold: float) -> bool:
+    concept_norm = _normalize_answer_text(concept)
+    if not concept_norm:
+        return False
+
+    if concept_norm in answer_norm:
+        return True
+
+    # Symmetric substring fallback for concise concept labels.
+    if len(answer_norm) >= max(4, int(0.5 * len(concept_norm))) and answer_norm in concept_norm:
+        return True
+
+    if _compute_token_f1(concept, answer) >= match_f1_threshold:
+        return True
+
+    concept_tokens = set(_tokenize_text(concept))
+    answer_tokens = set(_tokenize_text(answer))
+    if concept_tokens and answer_tokens:
+        overlap = len(concept_tokens & answer_tokens) / len(concept_tokens)
+        if overlap >= 0.6:
+            return True
+
+    return False
 
 
 def _split_answer_units(answer: str) -> list[str]:
@@ -492,38 +587,70 @@ def _split_supporting_fact_units(text: str) -> list[str]:
     return units
 
 
-def _compute_required_concepts_metrics(answer: str, required_concepts: list[str]) -> dict[str, Any]:
+def _compute_required_concepts_metrics(
+    answer: str,
+    required_concepts: list[str],
+    match_f1_threshold: float,
+) -> dict[str, Any]:
     concepts = _ordered_unique_texts([str(c) for c in required_concepts])
     if not concepts:
         return {
             "comprehensiveness": None,
+            "comprehensiveness_relaxed": None,
+            "comprehensiveness_strict": None,
             "required_concepts_covered_ratio": None,
+            "required_concepts_covered_ratio_relaxed": None,
+            "required_concepts_covered_ratio_strict": None,
             "required_concepts_covered_count": 0,
+            "required_concepts_covered_count_relaxed": 0,
+            "required_concepts_covered_count_strict": 0,
             "required_concepts_total": 0,
             "covered_concepts": [],
+            "covered_concepts_relaxed": [],
+            "covered_concepts_strict": [],
             "missing_concepts": [],
+            "missing_concepts_relaxed": [],
+            "missing_concepts_strict": [],
         }
 
     answer_norm = _normalize_answer_text(answer)
-    covered: list[str] = []
-    missing: list[str] = []
+    covered_strict: list[str] = []
+    covered_relaxed: list[str] = []
+    missing_strict: list[str] = []
+    missing_relaxed: list[str] = []
 
     for concept in concepts:
-        concept_norm = _normalize_answer_text(concept)
-        if concept_norm and concept_norm in answer_norm:
-            covered.append(concept)
+        if _concept_covered_strict(answer_norm, concept):
+            covered_strict.append(concept)
         else:
-            missing.append(concept)
+            missing_strict.append(concept)
 
-    ratio = len(covered) / len(concepts)
+        if _concept_covered_relaxed(answer, answer_norm, concept, match_f1_threshold=match_f1_threshold):
+            covered_relaxed.append(concept)
+        else:
+            missing_relaxed.append(concept)
+
+    ratio_strict = len(covered_strict) / len(concepts)
+    ratio_relaxed = len(covered_relaxed) / len(concepts)
 
     return {
-        "comprehensiveness": float(ratio),
-        "required_concepts_covered_ratio": float(ratio),
-        "required_concepts_covered_count": len(covered),
+        # Keep existing key names mapped to relaxed metrics for Set-B primary reporting.
+        "comprehensiveness": float(ratio_relaxed),
+        "comprehensiveness_relaxed": float(ratio_relaxed),
+        "comprehensiveness_strict": float(ratio_strict),
+        "required_concepts_covered_ratio": float(ratio_relaxed),
+        "required_concepts_covered_ratio_relaxed": float(ratio_relaxed),
+        "required_concepts_covered_ratio_strict": float(ratio_strict),
+        "required_concepts_covered_count": len(covered_relaxed),
+        "required_concepts_covered_count_relaxed": len(covered_relaxed),
+        "required_concepts_covered_count_strict": len(covered_strict),
         "required_concepts_total": len(concepts),
-        "covered_concepts": covered,
-        "missing_concepts": missing,
+        "covered_concepts": covered_relaxed,
+        "covered_concepts_relaxed": covered_relaxed,
+        "covered_concepts_strict": covered_strict,
+        "missing_concepts": missing_relaxed,
+        "missing_concepts_relaxed": missing_relaxed,
+        "missing_concepts_strict": missing_strict,
     }
 
 
@@ -579,7 +706,8 @@ def _maximum_bipartite_text_matches(pred_texts: list[str], gold_texts: list[str]
 def _compute_supporting_fact_prf(
     answer: str,
     supporting_facts: list[str],
-    match_f1_threshold: float,
+    strict_match_f1_threshold: float,
+    relaxed_match_f1_threshold: float,
 ) -> dict[str, Any]:
     gold_units = _ordered_unique_texts([str(x) for x in supporting_facts])
     if not gold_units:
@@ -587,29 +715,63 @@ def _compute_supporting_fact_prf(
             "supporting_fact_precision": None,
             "supporting_fact_recall": None,
             "supporting_fact_f1": None,
+            "supporting_fact_precision_relaxed": None,
+            "supporting_fact_recall_relaxed": None,
+            "supporting_fact_f1_relaxed": None,
+            "supporting_fact_precision_strict": None,
+            "supporting_fact_recall_strict": None,
+            "supporting_fact_f1_strict": None,
             "supporting_fact_pred_count": 0,
             "supporting_fact_gold_count": 0,
             "supporting_fact_match_count": 0,
+            "supporting_fact_match_count_relaxed": 0,
+            "supporting_fact_match_count_strict": 0,
         }
 
     pred_units = _split_supporting_fact_units(answer)
-    matched = _maximum_bipartite_text_matches(
+    matched_strict = _maximum_bipartite_text_matches(
         pred_texts=pred_units,
         gold_texts=gold_units,
-        threshold=match_f1_threshold,
+        threshold=strict_match_f1_threshold,
+    )
+    matched_relaxed = _maximum_bipartite_text_matches(
+        pred_texts=pred_units,
+        gold_texts=gold_units,
+        threshold=relaxed_match_f1_threshold,
     )
 
-    precision = matched / len(pred_units) if pred_units else 0.0
-    recall = matched / len(gold_units) if gold_units else 0.0
-    f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+    precision_strict = matched_strict / len(pred_units) if pred_units else 0.0
+    recall_strict = matched_strict / len(gold_units) if gold_units else 0.0
+    f1_strict = (
+        2 * precision_strict * recall_strict / (precision_strict + recall_strict)
+        if (precision_strict + recall_strict) > 0
+        else 0.0
+    )
+
+    precision_relaxed = matched_relaxed / len(pred_units) if pred_units else 0.0
+    recall_relaxed = matched_relaxed / len(gold_units) if gold_units else 0.0
+    f1_relaxed = (
+        2 * precision_relaxed * recall_relaxed / (precision_relaxed + recall_relaxed)
+        if (precision_relaxed + recall_relaxed) > 0
+        else 0.0
+    )
 
     return {
-        "supporting_fact_precision": float(precision),
-        "supporting_fact_recall": float(recall),
-        "supporting_fact_f1": float(f1),
+        # Keep existing names mapped to relaxed values for Set-B primary reporting.
+        "supporting_fact_precision": float(precision_relaxed),
+        "supporting_fact_recall": float(recall_relaxed),
+        "supporting_fact_f1": float(f1_relaxed),
+        "supporting_fact_precision_relaxed": float(precision_relaxed),
+        "supporting_fact_recall_relaxed": float(recall_relaxed),
+        "supporting_fact_f1_relaxed": float(f1_relaxed),
+        "supporting_fact_precision_strict": float(precision_strict),
+        "supporting_fact_recall_strict": float(recall_strict),
+        "supporting_fact_f1_strict": float(f1_strict),
         "supporting_fact_pred_count": len(pred_units),
         "supporting_fact_gold_count": len(gold_units),
-        "supporting_fact_match_count": int(matched),
+        "supporting_fact_match_count": int(matched_relaxed),
+        "supporting_fact_match_count_relaxed": int(matched_relaxed),
+        "supporting_fact_match_count_strict": int(matched_strict),
     }
 
 
@@ -627,6 +789,45 @@ def _extract_judge_primary_metrics(judge_scores: dict[str, Any] | None) -> dict[
         "context_recall": float(context_recall) if isinstance(context_recall, (int, float)) else None,
         "faithfulness": float(faithfulness) if isinstance(faithfulness, (int, float)) else None,
     }
+
+
+def _build_set_b_generation_prompt(question: str, context_text: str, answer_mode: str | None) -> str:
+    mode = str(answer_mode or "macro").strip().lower()
+    style = "macro" if mode != "micro" else "micro"
+
+    if style == "macro":
+        answer_style = """
+输出风格（macro）：
+1. 先给 1 句总述。
+2. 再用“要点1/要点2/...”分条回答，尽量覆盖不同子主题信息。
+3. 每个要点都尽可能对应上下文里的明确证据。
+""".strip()
+    else:
+        answer_style = """
+输出风格（micro）：
+1. 先给简短结论。
+2. 再补 1-2 条关键依据。
+""".strip()
+
+    return f"""
+你是严谨的课程问答助手，只能依据给定资料回答问题。
+
+硬性规则：
+1. 必须优先回答“资料中可证实”的部分，不允许因为局部缺信息而整题拒答。
+2. 若某个子问题资料不足，请在对应要点后标注“【资料未覆盖】...”，但继续完成其余可回答部分。
+3. 只有当问题的全部核心要点都无证据时，才允许输出“根据现有资料无法回答。”
+4. 严禁引入外部知识，严禁编造。
+
+{answer_style}
+
+【参考资料】
+{context_text}
+
+【问题】
+{question}
+
+请直接给出答案：
+""".strip()
 
 
 class SetBRewriteGateway:
@@ -734,16 +935,33 @@ class SetBEvaluatorRunner:
         self.supporting_fact_match_f1_threshold = float(
             os.getenv("SET_B_SUPPORTING_FACT_MATCH_F1_THRESHOLD", "0.55")
         )
+        self.supporting_fact_relaxed_match_f1_threshold = float(
+            os.getenv("SET_B_SUPPORTING_FACT_RELAXED_F1_THRESHOLD", "0.35")
+        )
+        if self.supporting_fact_relaxed_match_f1_threshold > self.supporting_fact_match_f1_threshold:
+            self.supporting_fact_relaxed_match_f1_threshold = self.supporting_fact_match_f1_threshold
+
+        self.concept_match_f1_threshold = float(
+            os.getenv("SET_B_CONCEPT_MATCH_F1_THRESHOLD", "0.4")
+        )
 
         self.a_top_k_per_term = max(1, int(os.getenv("SET_B_A_TOP_K_PER_TERM", "3")))
         self.a_similarity_threshold = float(os.getenv("SET_B_A_SIMILARITY_THRESHOLD", "0.5"))
 
-        self.b_top_k = max(1, int(os.getenv("SET_B_B_TOP_K", "20")))
+        self.b_top_k = max(1, int(os.getenv("SET_B_B_TOP_K", "28")))
         self.b_include_subsumed_layer0 = _parse_bool(
             os.getenv("SET_B_B_INCLUDE_SUBSUMED_LAYER0"),
-            default=False,
+            default=True,
         )
         self.b_rel_type = os.getenv("SET_B_B_REL_TYPE", "GROUP_B_PARENT_OF").strip() or "GROUP_B_PARENT_OF"
+        self.b_context_budget_chars = max(
+            800,
+            int(os.getenv("SET_B_B_CONTEXT_BUDGET_CHARS", str(max(self.context_budget_chars, 3000)))),
+        )
+        self.c_context_budget_chars = max(
+            800,
+            int(os.getenv("SET_B_C_CONTEXT_BUDGET_CHARS", str(max(self.context_budget_chars, 3200)))),
+        )
 
         self.ab_rewrite_model = os.getenv("SET_B_AB_REWRITE_MODEL", DEFAULT_DEEPSEEK_ENDPOINT)
         self.a_rewrite_n = max(
@@ -791,8 +1009,18 @@ class SetBEvaluatorRunner:
         )
 
         c_cfg = GroupCDualRetrieverConfig()
-        c_cfg.state_weight_rho = 0.0
+        c_cfg.top_n_final = max(1, int(os.getenv("SET_B_C_TOP_N_FINAL", "10")))
+        c_cfg.diversity_max_per_syllabus = max(1, int(os.getenv("SET_B_C_DIVERSITY_MAX_PER_SYLLABUS", "3")))
+        c_cfg.top_k_macro = max(1, int(os.getenv("SET_B_C_TOP_K_MACRO", "8")))
+        c_cfg.top_k_micro = max(c_cfg.top_n_final, int(os.getenv("SET_B_C_TOP_K_MICRO", "24")))
+        c_cfg.state_weight_rho = float(os.getenv("SET_B_C_STATE_WEIGHT_RHO", "0.0"))
         self.c_retriever = GroupCDualRetriever(cfg=c_cfg)
+
+        self.group_generation_models = {
+            "A": self.a_generator_model,
+            "B": self.b_generator_model,
+            "C": self.c_generator_model,
+        }
 
         self.generators = {
             "A": self._make_generator(self.a_generator_model),
@@ -951,7 +1179,7 @@ class SetBEvaluatorRunner:
             assembled_context, selected_nodes, assemble_metrics = assemble_macro_to_micro_context(
                 layered_buckets=layered_buckets,
                 include_subsumed_layer0=self.b_include_subsumed_layer0,
-                context_max_chars=self.context_budget_chars,
+                context_max_chars=self.b_context_budget_chars,
             )
             context_sources = self._extract_b_layer0_sources(selected_nodes)
             raw_layer0_sources = self._extract_b_layer0_sources(raw_nodes)
@@ -1015,7 +1243,7 @@ class SetBEvaluatorRunner:
                     metric_sources.append(src)
 
                 line = f"[Source: {src or 'UNKNOWN_SOURCE'}]\n{content}"
-                if context_chars + len(line) <= self.context_budget_chars:
+                if context_chars + len(line) <= self.c_context_budget_chars:
                     context_lines.append(line)
                     context_chars += len(line)
                     if src and source_key and source_key not in seen_context_source:
@@ -1038,12 +1266,49 @@ class SetBEvaluatorRunner:
 
         raise ValueError(f"Unsupported group: {group}")
 
-    def _generate_answer(self, group: str, question: str, context_text: str) -> tuple[str, str, float]:
+    def _generate_answer(
+        self,
+        group: str,
+        question: str,
+        context_text: str,
+        answer_mode: str | None = None,
+    ) -> tuple[str, str, float]:
         started = time.time()
-        generator = self.generators[group]
-        chunks = [context_text] if context_text else ["No relevant context found."]
-        answer, context_used = generator.generate_response(question, chunks)
-        return answer, context_used, (time.time() - started) * 1000
+        context_used = context_text if context_text else "No relevant context found."
+
+        if not context_text.strip():
+            return "根据现有资料无法回答。", context_used, (time.time() - started) * 1000
+
+        prompt = _build_set_b_generation_prompt(
+            question=question,
+            context_text=context_text,
+            answer_mode=answer_mode,
+        )
+
+        try:
+            temperature, max_tokens = get_adaptive_generation_params(prompt, task="generate")
+            answer = ark_chat_completion(
+                model=self.group_generation_models.get(group, self.a_generator_model),
+                prompt=prompt,
+                api_base=self.runtime_cfg.llm_api_base,
+                api_key=self.runtime_cfg.ark_api_key,
+                temperature=temperature,
+                max_tokens=max(320, max_tokens),
+                timeout_sec=180,
+            )
+            if not str(answer).strip():
+                answer = "根据现有资料无法回答。"
+            return str(answer).strip(), context_used, (time.time() - started) * 1000
+        except Exception as exc:
+            logger.warning("Set-B custom generation failed for group=%s, fallback to baseline generator: %s", group, exc)
+            generator = self.generators[group]
+            chunks = [context_text]
+            answer, fallback_context = generator.generate_response(
+                question,
+                chunks,
+                answer_mode=answer_mode,
+            )
+            return answer, fallback_context, (time.time() - started) * 1000
 
     def _validate_set_b_annotations(self, sample: dict[str, Any]) -> list[str]:
         warnings: list[str] = []
@@ -1100,6 +1365,7 @@ class SetBEvaluatorRunner:
             group=group,
             question=question,
             context_text=retrieval.context_text,
+            answer_mode=qtype,
         )
 
         context_sources_norm = _ordered_unique_sources(retrieval.retrieved_sources)
@@ -1118,19 +1384,33 @@ class SetBEvaluatorRunner:
             k=self.metric_k,
         )
         source_prf = _compute_source_prf(metric_sources_equiv_norm, golden_sources_equiv_norm)
+        source_precision_at_k = _compute_source_precision_at_k(
+            ranked_sources_norm=metric_sources_equiv_norm,
+            golden_sources_norm=golden_sources_equiv_norm,
+            k=self.metric_k,
+        )
 
-        concept_metrics = _compute_required_concepts_metrics(answer, required_concepts)
-        diversity = _compute_diversity(answer, concept_metrics["covered_concepts"])
+        concept_metrics = _compute_required_concepts_metrics(
+            answer,
+            required_concepts,
+            match_f1_threshold=self.concept_match_f1_threshold,
+        )
+        diversity_relaxed = _compute_diversity(answer, concept_metrics["covered_concepts_relaxed"])
+        diversity_strict = _compute_diversity(answer, concept_metrics["covered_concepts_strict"])
 
         supporting_fact_prf = _compute_supporting_fact_prf(
             answer=answer,
             supporting_facts=supporting_facts,
-            match_f1_threshold=self.supporting_fact_match_f1_threshold,
+            strict_match_f1_threshold=self.supporting_fact_match_f1_threshold,
+            relaxed_match_f1_threshold=self.supporting_fact_relaxed_match_f1_threshold,
         )
 
         answer_em_relaxed = _compute_em_relaxed(answer, ground_truth)
         answer_f1 = _compute_token_f1(answer, ground_truth)
         gold_points_coverage = _compute_gold_points_coverage(answer, gold_points)
+        refusal_kind = _classify_refusal_answer(answer)
+        refusal_rate = 1.0 if refusal_kind == REFUSAL_CLASS_FULL else 0.0
+        partial_unknown_rate = 1.0 if refusal_kind == REFUSAL_CLASS_PARTIAL else 0.0
 
         judge_scores = None
         judge_latency_ms = 0.0
@@ -1195,6 +1475,9 @@ class SetBEvaluatorRunner:
             "generation": {
                 "answer": answer,
                 "generation_latency_ms": round(generation_latency_ms, 2),
+                "answer_mode": qtype,
+                "is_refusal": bool(refusal_rate > 0.0),
+                "refusal_kind": refusal_kind,
             },
             "timing": {
                 "judge_latency_ms": round(judge_latency_ms, 2),
@@ -1203,33 +1486,64 @@ class SetBEvaluatorRunner:
             "metrics": {
                 **retrieval_metrics,
                 **source_prf,
+                "source_precision_at_k": float(source_precision_at_k),
                 "supporting_fact_precision": supporting_fact_prf["supporting_fact_precision"],
                 "supporting_fact_recall": supporting_fact_prf["supporting_fact_recall"],
                 "supporting_fact_f1": supporting_fact_prf["supporting_fact_f1"],
+                "supporting_fact_precision_relaxed": supporting_fact_prf["supporting_fact_precision_relaxed"],
+                "supporting_fact_recall_relaxed": supporting_fact_prf["supporting_fact_recall_relaxed"],
+                "supporting_fact_f1_relaxed": supporting_fact_prf["supporting_fact_f1_relaxed"],
+                "supporting_fact_precision_strict": supporting_fact_prf["supporting_fact_precision_strict"],
+                "supporting_fact_recall_strict": supporting_fact_prf["supporting_fact_recall_strict"],
+                "supporting_fact_f1_strict": supporting_fact_prf["supporting_fact_f1_strict"],
                 "comprehensiveness": concept_metrics["comprehensiveness"],
                 "required_concepts_covered_ratio": concept_metrics["required_concepts_covered_ratio"],
-                "diversity": float(diversity),
+                "comprehensiveness_relaxed": concept_metrics["comprehensiveness_relaxed"],
+                "comprehensiveness_strict": concept_metrics["comprehensiveness_strict"],
+                "required_concepts_covered_ratio_relaxed": concept_metrics["required_concepts_covered_ratio_relaxed"],
+                "required_concepts_covered_ratio_strict": concept_metrics["required_concepts_covered_ratio_strict"],
+                "diversity": float(diversity_relaxed),
+                "diversity_relaxed": float(diversity_relaxed),
+                "diversity_strict": float(diversity_strict),
                 "answer_em_relaxed": float(answer_em_relaxed),
                 "answer_f1": float(answer_f1),
                 "gold_points_coverage": gold_points_coverage,
                 "context_recall": judge_primary["context_recall"],
                 "faithfulness": judge_primary["faithfulness"],
+                "refusal_rate": float(refusal_rate),
+                "partial_unknown_rate": float(partial_unknown_rate),
             },
             "set_b_primary": {
                 "comprehensiveness": concept_metrics["comprehensiveness"],
                 "context_recall": judge_primary["context_recall"],
                 "faithfulness": judge_primary["faithfulness"],
-                "diversity": float(diversity),
+                "diversity": float(diversity_relaxed),
                 "supporting_fact_f1": supporting_fact_prf["supporting_fact_f1"],
+            },
+            "set_b_primary_strict": {
+                "comprehensiveness": concept_metrics["comprehensiveness_strict"],
+                "context_recall": judge_primary["context_recall"],
+                "faithfulness": judge_primary["faithfulness"],
+                "diversity": float(diversity_strict),
+                "supporting_fact_f1": supporting_fact_prf["supporting_fact_f1_strict"],
             },
             "debug_metrics": {
                 "required_concepts_covered_count": concept_metrics["required_concepts_covered_count"],
+                "required_concepts_covered_count_relaxed": concept_metrics["required_concepts_covered_count_relaxed"],
+                "required_concepts_covered_count_strict": concept_metrics["required_concepts_covered_count_strict"],
                 "required_concepts_total": concept_metrics["required_concepts_total"],
                 "covered_concepts": concept_metrics["covered_concepts"],
+                "covered_concepts_relaxed": concept_metrics["covered_concepts_relaxed"],
+                "covered_concepts_strict": concept_metrics["covered_concepts_strict"],
                 "missing_concepts": concept_metrics["missing_concepts"],
+                "missing_concepts_relaxed": concept_metrics["missing_concepts_relaxed"],
+                "missing_concepts_strict": concept_metrics["missing_concepts_strict"],
                 "supporting_fact_pred_count": supporting_fact_prf["supporting_fact_pred_count"],
                 "supporting_fact_gold_count": supporting_fact_prf["supporting_fact_gold_count"],
                 "supporting_fact_match_count": supporting_fact_prf["supporting_fact_match_count"],
+                "supporting_fact_match_count_relaxed": supporting_fact_prf["supporting_fact_match_count_relaxed"],
+                "supporting_fact_match_count_strict": supporting_fact_prf["supporting_fact_match_count_strict"],
+                "refusal_kind": refusal_kind,
             },
             "judge_metrics": judge_scores,
             "errors": annotation_warnings,
@@ -1242,22 +1556,45 @@ class SetBEvaluatorRunner:
             "hit_at_1",
             "ndcg_at_k",
             "source_precision",
+            "source_precision_at_k",
             "source_recall",
             "source_f1",
             "supporting_fact_precision",
             "supporting_fact_recall",
             "supporting_fact_f1",
+            "supporting_fact_precision_relaxed",
+            "supporting_fact_recall_relaxed",
+            "supporting_fact_f1_relaxed",
+            "supporting_fact_precision_strict",
+            "supporting_fact_recall_strict",
+            "supporting_fact_f1_strict",
             "comprehensiveness",
+            "comprehensiveness_relaxed",
+            "comprehensiveness_strict",
             "required_concepts_covered_ratio",
+            "required_concepts_covered_ratio_relaxed",
+            "required_concepts_covered_ratio_strict",
             "diversity",
+            "diversity_relaxed",
+            "diversity_strict",
             "context_recall",
             "faithfulness",
             "answer_em_relaxed",
             "answer_f1",
             "gold_points_coverage",
+            "refusal_rate",
+            "partial_unknown_rate",
         ]
 
         primary_metric_keys = [
+            "comprehensiveness",
+            "context_recall",
+            "faithfulness",
+            "diversity",
+            "supporting_fact_f1",
+        ]
+
+        strict_primary_metric_keys = [
             "comprehensiveness",
             "context_recall",
             "faithfulness",
@@ -1289,10 +1626,23 @@ class SetBEvaluatorRunner:
                     "diversity",
                     "supporting_fact_f1",
                 ],
-                "comprehensiveness_rule": "|covered_required_concepts| / |required_concepts|",
+                "strict_diagnostic_metrics": [
+                    "comprehensiveness_strict",
+                    "diversity_strict",
+                    "supporting_fact_f1_strict",
+                ],
+                "comprehensiveness_rule": "|covered_required_concepts_relaxed| / |required_concepts|",
+                "comprehensiveness_rule_strict": "strict_substring_match(concept, answer)",
+                "comprehensiveness_rule_relaxed": "strict_substring OR token_f1(concept, answer)>=threshold OR token_overlap_ratio>=0.6",
                 "diversity_rule": "|covered_required_concepts| / |answer_units|",
+                "diversity_rule_strict": "|covered_required_concepts_strict| / |answer_units|",
                 "supporting_fact_f1_rule": "F1 over bipartite text matches between answer fact units and supporting_facts",
+                "supporting_fact_f1_rule_strict": "bipartite_text_match_f1 >= strict_threshold",
+                "supporting_fact_f1_rule_relaxed": "bipartite_text_match_f1 >= relaxed_threshold",
                 "supporting_fact_match_f1_threshold": self.supporting_fact_match_f1_threshold,
+                "supporting_fact_match_f1_threshold_strict": self.supporting_fact_match_f1_threshold,
+                "supporting_fact_match_f1_threshold_relaxed": self.supporting_fact_relaxed_match_f1_threshold,
+                "concept_match_f1_threshold_relaxed": self.concept_match_f1_threshold,
             },
             "by_group": {},
             "by_group_and_type": {},
@@ -1319,6 +1669,15 @@ class SetBEvaluatorRunner:
                     if isinstance(val, (int, float)):
                         values.append(float(val))
                 primary_summary[key] = _mean_std(values)
+
+            strict_primary_summary: dict[str, Any] = {}
+            for key in strict_primary_metric_keys:
+                values = []
+                for row in group_rows:
+                    val = row.get("set_b_primary_strict", {}).get(key)
+                    if isinstance(val, (int, float)):
+                        values.append(float(val))
+                strict_primary_summary[key] = _mean_std(values)
 
             judge_summary: dict[str, Any] = {}
             if self.enable_judge:
@@ -1359,6 +1718,7 @@ class SetBEvaluatorRunner:
                 "count": len(group_rows),
                 "metrics": metric_summary,
                 "set_b_primary_metrics": primary_summary,
+                "set_b_primary_strict_metrics": strict_primary_summary,
                 "judge_metrics": judge_summary,
                 "latency_ms": {
                     "rewrite": _mean_std_p95(rewrite_latency),
@@ -1391,10 +1751,20 @@ class SetBEvaluatorRunner:
                             values.append(float(val))
                     bucket_primary_summary[key] = _mean_std(values)
 
+                bucket_strict_primary_summary: dict[str, Any] = {}
+                for key in strict_primary_metric_keys:
+                    values = []
+                    for row in bucket_rows:
+                        val = row.get("set_b_primary_strict", {}).get(key)
+                        if isinstance(val, (int, float)):
+                            values.append(float(val))
+                    bucket_strict_primary_summary[key] = _mean_std(values)
+
                 summary["by_group_and_type"][bucket_key] = {
                     "count": len(bucket_rows),
                     "metrics": bucket_metric_summary,
                     "set_b_primary_metrics": bucket_primary_summary,
+                    "set_b_primary_strict_metrics": bucket_strict_primary_summary,
                 }
 
             for hop in hops:
@@ -1419,10 +1789,20 @@ class SetBEvaluatorRunner:
                             values.append(float(val))
                     hop_primary_summary[key] = _mean_std(values)
 
+                hop_strict_primary_summary: dict[str, Any] = {}
+                for key in strict_primary_metric_keys:
+                    values = []
+                    for row in bucket_rows:
+                        val = row.get("set_b_primary_strict", {}).get(key)
+                        if isinstance(val, (int, float)):
+                            values.append(float(val))
+                    hop_strict_primary_summary[key] = _mean_std(values)
+
                 summary["by_group_and_hop"][bucket_key] = {
                     "count": len(bucket_rows),
                     "metrics": hop_metric_summary,
                     "set_b_primary_metrics": hop_primary_summary,
+                    "set_b_primary_strict_metrics": hop_strict_primary_summary,
                 }
 
         return summary
@@ -1465,6 +1845,7 @@ class SetBEvaluatorRunner:
                         "timing": {},
                         "metrics": {},
                         "set_b_primary": {},
+                        "set_b_primary_strict": {},
                         "debug_metrics": {},
                         "judge_metrics": None,
                         "errors": [str(exc)],

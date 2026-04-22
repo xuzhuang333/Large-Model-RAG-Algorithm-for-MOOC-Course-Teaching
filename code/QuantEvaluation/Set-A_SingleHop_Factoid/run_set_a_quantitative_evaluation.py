@@ -368,6 +368,28 @@ def _compute_gold_points_coverage(answer: str, gold_points: list[str]) -> float 
     return hit / len(points)
 
 
+def _is_refusal_answer(answer: str) -> bool:
+    text = str(answer or "").strip()
+    if not text:
+        return False
+
+    normalized = _normalize_answer_text(text)
+    refusal_markers = [
+        "根据现有资料无法回答",
+        "无法回答",
+        "信息不足",
+        "资料不足",
+        "未提供相关信息",
+        "no relevant context found",
+    ]
+
+    for marker in refusal_markers:
+        marker_norm = _normalize_answer_text(marker)
+        if marker_norm and marker_norm in normalized:
+            return True
+    return False
+
+
 def _compute_retrieval_metrics(
     ranked_sources_norm: list[str],
     golden_sources_norm: list[str],
@@ -431,6 +453,19 @@ def _compute_source_prf(retrieved_norm: list[str], golden_norm: list[str]) -> di
         "source_recall": float(recall),
         "source_f1": float(f1),
     }
+
+
+def _compute_source_precision_at_k(
+    ranked_sources_norm: list[str],
+    golden_sources_norm: list[str],
+    k: int,
+) -> float:
+    top_k = ranked_sources_norm[: max(1, int(k))]
+    if not top_k:
+        return 0.0
+
+    matched = _maximum_bipartite_source_matches(top_k, golden_sources_norm)
+    return float(matched / len(top_k))
 
 
 class SetARewriteGateway:
@@ -835,11 +870,21 @@ class SetAEvaluatorRunner:
 
         raise ValueError(f"Unsupported group: {group}")
 
-    def _generate_answer(self, group: str, question: str, context_text: str) -> tuple[str, str, float]:
+    def _generate_answer(
+        self,
+        group: str,
+        question: str,
+        context_text: str,
+        answer_mode: str | None = None,
+    ) -> tuple[str, str, float]:
         started = time.time()
         generator = self.generators[group]
         chunks = [context_text] if context_text else ["No relevant context found."]
-        answer, context_used = generator.generate_response(question, chunks)
+        answer, context_used = generator.generate_response(
+            question,
+            chunks,
+            answer_mode=answer_mode,
+        )
         return answer, context_used, (time.time() - started) * 1000
 
     def _evaluate_sample_group(
@@ -864,6 +909,7 @@ class SetAEvaluatorRunner:
             group=group,
             question=question,
             context_text=retrieval.context_text,
+            answer_mode=qtype,
         )
 
         context_sources_norm = _ordered_unique_sources(retrieval.retrieved_sources)
@@ -882,10 +928,16 @@ class SetAEvaluatorRunner:
             k=self.metric_k,
         )
         source_prf = _compute_source_prf(metric_sources_equiv_norm, golden_sources_equiv_norm)
+        source_precision_at_k = _compute_source_precision_at_k(
+            ranked_sources_norm=metric_sources_equiv_norm,
+            golden_sources_norm=golden_sources_equiv_norm,
+            k=self.metric_k,
+        )
 
         answer_em = _compute_em(answer, ground_truth)
         answer_f1 = _compute_token_f1(answer, ground_truth)
         gold_points_coverage = _compute_gold_points_coverage(answer, gold_points)
+        refusal_rate = 1.0 if _is_refusal_answer(answer) else 0.0
 
         judge_scores = None
         if self.judge is not None:
@@ -937,13 +989,17 @@ class SetAEvaluatorRunner:
             "generation": {
                 "answer": answer,
                 "generation_latency_ms": round(generation_latency_ms, 2),
+                "answer_mode": qtype,
+                "is_refusal": bool(refusal_rate > 0.0),
             },
             "metrics": {
                 **retrieval_metrics,
                 **source_prf,
+                "source_precision_at_k": float(source_precision_at_k),
                 "answer_em": float(answer_em),
                 "answer_f1": float(answer_f1),
                 "gold_points_coverage": gold_points_coverage,
+                "refusal_rate": float(refusal_rate),
             },
             "judge_metrics": judge_scores,
             "errors": [],
@@ -956,11 +1012,13 @@ class SetAEvaluatorRunner:
             "hit_at_1",
             "ndcg_at_k",
             "source_precision",
+            "source_precision_at_k",
             "source_recall",
             "source_f1",
             "answer_em",
             "answer_f1",
             "gold_points_coverage",
+            "refusal_rate",
         ]
 
         judge_keys = [

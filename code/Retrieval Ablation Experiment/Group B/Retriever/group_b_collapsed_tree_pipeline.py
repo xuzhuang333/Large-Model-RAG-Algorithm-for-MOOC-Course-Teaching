@@ -220,10 +220,12 @@ def assemble_macro_to_micro_context(
                 skipped_subsumed += 1
                 continue
 
-            line = (
-                f"- Node={node['node_id']} | Layer={node['layer']} | Score={node['score']:.4f}"
-                f"\n{node['text'].strip()}\n"
-            )
+            node_text = str(node.get("text", "") or "").strip()
+            if not node_text:
+                continue
+
+            # Keep only instructional content in generation context.
+            line = f"- {node_text}\n"
             if current_chars + len(line) > context_max_chars:
                 break
 

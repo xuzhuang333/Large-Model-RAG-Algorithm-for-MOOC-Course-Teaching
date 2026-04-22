@@ -4,6 +4,7 @@ import json
 import logging
 import math
 import os
+import re
 import sys
 from dataclasses import asdict, dataclass, field
 from itertools import combinations
@@ -40,8 +41,9 @@ logger = logging.getLogger("GroupC_Dual_Retriever")
 class GroupCDualRetrieverConfig:
     top_k_micro: int = 15
     top_k_macro: int = 5
-    top_n_final: int = 10
+    top_n_final: int = 6
     gravity_alpha: float = 0.3
+    query_overlap_rerank_weight: float = 0.15
     hard_neg_tolerance: float = 0.05
     hard_neg_top_m: int = 5
     diversity_max_per_syllabus: int = 2
@@ -54,7 +56,7 @@ class GroupCDualRetrieverConfig:
     code_vector_index: str = "group_c_code_vector_index"
     llm_model: str = DEFAULT_DEEPSEEK_ENDPOINT
     llm_api_base: str = DEFAULT_ARK_API_BASE
-    state_weight_rho: float = 0.25
+    state_weight_rho: float = 0.08
     user_active_context_n: int = 5
     route_timeout_sec: int = 90
     lambda_base: float = 0.1
@@ -79,8 +81,9 @@ def build_config_from_env() -> GroupCDualRetrieverConfig:
     return GroupCDualRetrieverConfig(
         top_k_micro=max(1, int(os.getenv("GROUP_C_TOP_K_MICRO", "15"))),
         top_k_macro=max(1, int(os.getenv("GROUP_C_TOP_K_MACRO", "5"))),
-        top_n_final=max(1, int(os.getenv("GROUP_C_TOP_N_FINAL", "10"))),
+        top_n_final=max(1, int(os.getenv("GROUP_C_TOP_N_FINAL", "6"))),
         gravity_alpha=float(os.getenv("GROUP_C_GRAVITY_ALPHA", "0.3")),
+        query_overlap_rerank_weight=max(0.0, float(os.getenv("GROUP_C_QUERY_OVERLAP_RERANK_WEIGHT", "0.15"))),
         hard_neg_tolerance=max(0.0, float(os.getenv("GROUP_C_HARD_NEG_TOLERANCE", "0.05"))),
         hard_neg_top_m=max(2, int(os.getenv("GROUP_C_HARD_NEG_TOP_M", "5"))),
         diversity_max_per_syllabus=max(1, int(os.getenv("GROUP_C_DIVERSITY_MAX_PER_SYLLABUS", "2"))),
@@ -172,6 +175,11 @@ def _normalize_scores(rows: list[dict[str, Any]], id_key: str, score_key: str) -
 
     norm = (arr - min_val) / (max_val - min_val)
     return {item_id: float(val) for item_id, val in zip(ids, norm.tolist())}
+
+
+def _tokenize_overlap(text: str) -> set[str]:
+    tokens = re.findall(r"[\u4e00-\u9fff]|[a-z0-9_]+", str(text or "").lower())
+    return {tok for tok in tokens if tok}
 
 
 def evaluate_retrieval_metrics(
@@ -612,11 +620,13 @@ class GroupCDualRetriever:
         macro_rows: list[dict[str, Any]],
         micro_rows: list[dict[str, Any]],
         user_state_by_syllabus: dict[str, dict[str, Any]] | None = None,
+        query_text: str = "",
     ) -> list[dict[str, Any]]:
         user_state_by_syllabus = user_state_by_syllabus or {}
         macro_raw = {row["syllabus_id"]: float(row["macro_score"]) for row in macro_rows}
         macro_norm = _normalize_scores(macro_rows, id_key="syllabus_id", score_key="macro_score")
         micro_norm = _normalize_scores(micro_rows, id_key="snippet_id", score_key="micro_score")
+        query_tokens = _tokenize_overlap(query_text)
 
         fused: list[dict[str, Any]] = []
         for row in micro_rows:
@@ -634,6 +644,14 @@ class GroupCDualRetriever:
                 + (self.cfg.state_weight_rho * state_weight)
             )
 
+            query_overlap = 0.0
+            if query_tokens:
+                content_tokens = _tokenize_overlap(row.get("content", ""))
+                if content_tokens:
+                    query_overlap = len(query_tokens & content_tokens) / len(query_tokens)
+
+            rerank_score = final_score + (self.cfg.query_overlap_rerank_weight * query_overlap)
+
             fused.append(
                 {
                     "snippet_id": snippet_id,
@@ -645,10 +663,12 @@ class GroupCDualRetriever:
                     "state_weight": float(state_weight),
                     "state_flags": state_flags,
                     "final_score": float(final_score),
+                    "query_overlap": float(query_overlap),
+                    "rerank_score": float(rerank_score),
                 }
             )
 
-        fused.sort(key=lambda x: x["final_score"], reverse=True)
+        fused.sort(key=lambda x: x["rerank_score"], reverse=True)
 
         # Diversity limit by syllabus branch before final top-n truncation.
         selected: list[dict[str, Any]] = []
@@ -1308,9 +1328,12 @@ class GroupCDualRetriever:
             macro_rows=macro_rows,
             micro_rows=micro_rows,
             user_state_by_syllabus=user_state_by_syllabus,
+            query_text=query,
         )
         debug_metrics["fuse_ms"] = round((perf_counter() - fuse_start) * 1000, 2)
         debug_metrics["final_candidate_count"] = len(candidates)
+        debug_metrics["rerank_method"] = "query_overlap_linear"
+        debug_metrics["rerank_weight"] = self.cfg.query_overlap_rerank_weight
 
         selected_parent_ids: list[str] = []
         _seen_parent_ids: set[str] = set()
