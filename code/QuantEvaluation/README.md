@@ -107,15 +107,26 @@ $env:SET_C_RANDOM_SEED = "42"
 python "E:\graduate_project\code\QuantEvaluation\Set-C_HardNegative_Discrimination\build_set_c_dataset_with_group_c_hardneg.py"
 
 ## Set-D 自动构建脚本（示例）
-$env:SET_D_SOURCE_SET_A_PATH = "E:\graduate_project\code\QuantEvaluation\Set-A_SingleHop_Factoid\set_a_auto_generated.json"
-$env:SET_D_TEMPLATE_PATH = "E:\graduate_project\code\QuantEvaluation\Set-D_Stateful_Trajectories\input_template_set_d.json"
-$env:SET_D_OUTPUT_PATH = "E:\graduate_project\code\QuantEvaluation\Set-D_Stateful_Trajectories\set_d_auto_generated.json"
-$env:SET_D_MIN_TURNS = "8"
-$env:SET_D_MAX_TURNS = "12"
-$env:SET_D_TARGET_TURNS = "10"
-$env:SET_D_MAX_TRAJECTORIES = "24"
-$env:SET_D_FORGETTING_TRAJECTORIES = "12"
-$env:SET_D_STRUGGLING_TRAJECTORIES = "12"
-$env:SET_D_RANDOM_SEED = "42"
+# 1) 数据输入输出（建议显式写，避免走旧文件）
+$env:SET_D_INPUT_PATH = "E:\graduate_project\code\QuantEvaluation\Set-D_Stateful_Trajectories\set_d_auto_generated.json"
+$env:SET_D_SAMPLE_OUTPUT_PATH = "E:\graduate_project\code\QuantEvaluation\Set-D_Stateful_Trajectories\set_d_quant_eval_samples.json"
+$env:SET_D_SUMMARY_OUTPUT_PATH = "E:\graduate_project\code\QuantEvaluation\Set-D_Stateful_Trajectories\set_d_quant_eval_summary.json"
 
-python "E:\graduate_project\code\QuantEvaluation\Set-D_Stateful_Trajectories\build_set_d_trajectories.py"
+# 2) 必须开启真实生成
+$env:SET_D_ENABLE_GENERATION = "1"
+
+# 3) 固定跑完整评测（避免继承旧的limit/sample配置）
+$env:SET_D_LIMIT = "0"
+$env:SET_D_RANDOM_SAMPLE_N = "0"
+$env:SET_D_GROUPS = "A,B,C_FULL,C_NOSTATE"
+
+# 4) 保证 C_FULL / C_NOSTATE 对比干净
+$env:SET_D_RESET_GROUP_C_STATE = "1"
+
+# 5) 生成稳定性（建议）
+$env:SET_D_GENERATION_TEMPERATURE = "0.1"
+
+# 6) 若你想“显式锁定 DeepSeek 端点”（建议加上，防止被历史env覆盖）
+$env:SET_D_A_GENERATOR_MODEL = "ep-20260327213054-gpbl2"
+$env:SET_D_B_GENERATOR_MODEL = "ep-20260327213054-gpbl2"
+$env:SET_D_C_GENERATOR_MODEL = "ep-20260327213054-gpbl2"
