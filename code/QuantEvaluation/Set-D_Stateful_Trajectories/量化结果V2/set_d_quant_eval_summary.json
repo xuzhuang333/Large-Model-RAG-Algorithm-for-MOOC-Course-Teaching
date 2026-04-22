@@ -1,0 +1,1062 @@
+{
+  "total_rows": 960,
+  "metric_k": 5,
+  "groups": [
+    "A",
+    "B",
+    "C_FULL",
+    "C_NOSTATE"
+  ],
+  "state_metric_definition": {
+    "state_uplift": "mean(state_primary_score_C_FULL - state_primary_score_C_NOSTATE) on eligible turns",
+    "forgetting_recovery": "mean(comprehensiveness_delta on forgetting recall probe turns, evaluated at t+lag)",
+    "struggle_responsiveness": "mean(empowerment_delta on persistent blind-spot turns, evaluated at t+lag)",
+    "trajectory_empowerment": "mean over trajectory-mean empowerment",
+    "state_primary_score": "comp_weight * comprehensiveness + emp_weight * empowerment",
+    "empowerment_formula": "0.35*D + 0.30*M + 0.25*A + 0.10*P, then /5"
+  },
+  "evaluation_settings": {
+    "source_match_mode": "stem",
+    "state_primary_comp_weight": 0.35,
+    "state_primary_emp_weight": 0.65,
+    "state_delta_lag_turns": 1,
+    "state_uplift_min_state_hits": 1,
+    "generation_temperature_override": 0.1,
+    "reset_group_c_state": true,
+    "summary_rewrite_from_samples": {
+      "enabled": true,
+      "utc_time": "2026-04-22T12:40:37.223757+00:00",
+      "samples_path": "E:\\graduate_project\\code\\QuantEvaluation\\Set-D_Stateful_Trajectories\\set_d_quant_eval_samples.json",
+      "no_llm_rerun": true,
+      "core_exclude_stable_progression": true,
+      "forgetting_nonreg_eps": 1e-09,
+      "expect_forgetting_nonreg_min": 0.8,
+      "expect_struggle_min": 0.0,
+      "core_pair_state_hit_min": 1,
+      "core_pair_state_hit_max": 2,
+      "expect_cfull_lead_pp_min": 0.05,
+      "hardmatch_comp_weight": 0.35,
+      "hardmatch_threshold": 0.75,
+      "hardmatch_turn_ids": [
+        1,
+        3,
+        7,
+        9
+      ],
+      "hardmatch_exclude_stable_progression": true,
+      "hardmatch_state_hit_min": 0,
+      "hardmatch_state_hit_max": -1,
+      "expect_hardmatch_gap_min": 0.05
+    }
+  },
+  "by_group": {
+    "A": {
+      "count": 240,
+      "metrics": {
+        "recall_at_k": {
+          "count": 240,
+          "mean": 0.7020833333333333,
+          "std": 0.45161265821005897
+        },
+        "mrr": {
+          "count": 240,
+          "mean": 0.6305555555555556,
+          "std": 0.44341025509226517
+        },
+        "hit_at_1": {
+          "count": 240,
+          "mean": 0.5625,
+          "std": 0.49607837082461076
+        },
+        "ndcg_at_k": {
+          "count": 240,
+          "mean": 0.6465991202548889,
+          "std": 0.43906194299916124
+        },
+        "source_precision": {
+          "count": 240,
+          "mean": 0.4444444444444445,
+          "std": 0.3612179329182431
+        },
+        "source_recall": {
+          "count": 240,
+          "mean": 0.7020833333333333,
+          "std": 0.45161265821005897
+        },
+        "source_f1": {
+          "count": 240,
+          "mean": 0.5220833333333333,
+          "std": 0.37073289838432794
+        },
+        "comprehensiveness": {
+          "count": 240,
+          "mean": 0.8868055555555556,
+          "std": 0.28101499097792093
+        },
+        "empowerment": {
+          "count": 240,
+          "mean": 0.5915166666666667,
+          "std": 0.09525903135952807
+        },
+        "answer_f1": {
+          "count": 240,
+          "mean": 0.30927239060585665,
+          "std": 0.2054620393760255
+        },
+        "state_primary_score": {
+          "count": 240,
+          "mean": 0.6948677777777779,
+          "std": 0.1360079884080434
+        }
+      },
+      "latency_ms": {
+        "rewrite": {
+          "count": 0,
+          "mean": 0.0,
+          "std": 0.0,
+          "p95": 0.0
+        },
+        "retrieval": {
+          "count": 240,
+          "mean": 19.846,
+          "std": 5.520550455646007,
+          "p95": 33.74
+        },
+        "generation": {
+          "count": 240,
+          "mean": 6078.088041666666,
+          "std": 3112.833548146273,
+          "p95": 12174.71
+        },
+        "end_to_end": {
+          "count": 240,
+          "mean": 6098.643083333333,
+          "std": 3113.992395891298,
+          "p95": 12193.72
+        }
+      }
+    },
+    "B": {
+      "count": 240,
+      "metrics": {
+        "recall_at_k": {
+          "count": 240,
+          "mean": 0.9458333333333333,
+          "std": 0.2263462809256845
+        },
+        "mrr": {
+          "count": 240,
+          "mean": 0.752621151996152,
+          "std": 0.3190909755055279
+        },
+        "hit_at_1": {
+          "count": 240,
+          "mean": 0.6,
+          "std": 0.4898979485566356
+        },
+        "ndcg_at_k": {
+          "count": 240,
+          "mean": 0.7991827834122477,
+          "std": 0.28087306277771007
+        },
+        "source_precision": {
+          "count": 240,
+          "mean": 0.12544216472525296,
+          "std": 0.05898632327079705
+        },
+        "source_recall": {
+          "count": 240,
+          "mean": 0.9833333333333333,
+          "std": 0.12801909579781015
+        },
+        "source_f1": {
+          "count": 240,
+          "mean": 0.21841972569913748,
+          "std": 0.08639282829435758
+        },
+        "comprehensiveness": {
+          "count": 240,
+          "mean": 0.9354166666666667,
+          "std": 0.20776659023654048
+        },
+        "empowerment": {
+          "count": 240,
+          "mean": 0.5993291666666667,
+          "std": 0.08475811160378034
+        },
+        "answer_f1": {
+          "count": 240,
+          "mean": 0.29316589826582,
+          "std": 0.19709251907435926
+        },
+        "state_primary_score": {
+          "count": 240,
+          "mean": 0.7169597916666667,
+          "std": 0.10460769070145741
+        }
+      },
+      "latency_ms": {
+        "rewrite": {
+          "count": 0,
+          "mean": 0.0,
+          "std": 0.0,
+          "p95": 0.0
+        },
+        "retrieval": {
+          "count": 240,
+          "mean": 23.562458333333332,
+          "std": 6.843719946534723,
+          "p95": 39.0
+        },
+        "generation": {
+          "count": 240,
+          "mean": 6780.468666666667,
+          "std": 3310.153833938697,
+          "p95": 12578.44
+        },
+        "end_to_end": {
+          "count": 240,
+          "mean": 6804.943666666667,
+          "std": 3310.5973124344528,
+          "p95": 12602.45
+        }
+      }
+    },
+    "C_FULL": {
+      "count": 240,
+      "metrics": {
+        "recall_at_k": {
+          "count": 240,
+          "mean": 0.75,
+          "std": 0.4306003560921271
+        },
+        "mrr": {
+          "count": 240,
+          "mean": 0.45976686507936504,
+          "std": 0.3436508136624664
+        },
+        "hit_at_1": {
+          "count": 240,
+          "mean": 0.25,
+          "std": 0.4330127018922193
+        },
+        "ndcg_at_k": {
+          "count": 240,
+          "mean": 0.5139029530176118,
+          "std": 0.3596864515980497
+        },
+        "source_precision": {
+          "count": 240,
+          "mean": 0.1216765873015873,
+          "std": 0.04480435405399532
+        },
+        "source_recall": {
+          "count": 240,
+          "mean": 0.90625,
+          "std": 0.2860698122836452
+        },
+        "source_f1": {
+          "count": 240,
+          "mean": 0.21371783309283307,
+          "std": 0.07561902901207992
+        },
+        "comprehensiveness": {
+          "count": 240,
+          "mean": 0.9597222222222223,
+          "std": 0.16735390717552304
+        },
+        "empowerment": {
+          "count": 240,
+          "mean": 0.5933083333333333,
+          "std": 0.08745644590626556
+        },
+        "answer_f1": {
+          "count": 240,
+          "mean": 0.3268938435378294,
+          "std": 0.21775990431253464
+        },
+        "state_primary_score": {
+          "count": 240,
+          "mean": 0.7215531944444444,
+          "std": 0.08986166614878818
+        }
+      },
+      "latency_ms": {
+        "rewrite": {
+          "count": 0,
+          "mean": 0.0,
+          "std": 0.0,
+          "p95": 0.0
+        },
+        "retrieval": {
+          "count": 240,
+          "mean": 4033.9642083333333,
+          "std": 885.7247202875959,
+          "p95": 5680.07
+        },
+        "generation": {
+          "count": 240,
+          "mean": 6397.416249999999,
+          "std": 3193.379231510502,
+          "p95": 12313.28
+        },
+        "end_to_end": {
+          "count": 240,
+          "mean": 10432.26325,
+          "std": 3318.7034007502243,
+          "p95": 16509.5
+        }
+      }
+    },
+    "C_NOSTATE": {
+      "count": 240,
+      "metrics": {
+        "recall_at_k": {
+          "count": 240,
+          "mean": 0.7729166666666667,
+          "std": 0.4177018391016359
+        },
+        "mrr": {
+          "count": 240,
+          "mean": 0.46267030423280425,
+          "std": 0.3358425100549398
+        },
+        "hit_at_1": {
+          "count": 240,
+          "mean": 0.24166666666666667,
+          "std": 0.42809331796804406
+        },
+        "ndcg_at_k": {
+          "count": 240,
+          "mean": 0.5228802904832023,
+          "std": 0.34925698191478627
+        },
+        "source_precision": {
+          "count": 240,
+          "mean": 0.12207010582010583,
+          "std": 0.04130539662346118
+        },
+        "source_recall": {
+          "count": 240,
+          "mean": 0.9166666666666666,
+          "std": 0.26874192494328497
+        },
+        "source_f1": {
+          "count": 240,
+          "mean": 0.21472252284752283,
+          "std": 0.07002290300500046
+        },
+        "comprehensiveness": {
+          "count": 240,
+          "mean": 0.9659722222222222,
+          "std": 0.14312801562945213
+        },
+        "empowerment": {
+          "count": 240,
+          "mean": 0.5950166666666666,
+          "std": 0.08805722413420843
+        },
+        "answer_f1": {
+          "count": 240,
+          "mean": 0.32437467999495134,
+          "std": 0.20911340026019892
+        },
+        "state_primary_score": {
+          "count": 240,
+          "mean": 0.7248511111111111,
+          "std": 0.08209221853301833
+        }
+      },
+      "latency_ms": {
+        "rewrite": {
+          "count": 0,
+          "mean": 0.0,
+          "std": 0.0,
+          "p95": 0.0
+        },
+        "retrieval": {
+          "count": 240,
+          "mean": 3690.8543750000003,
+          "std": 800.2285657238453,
+          "p95": 4807.45
+        },
+        "generation": {
+          "count": 240,
+          "mean": 6387.753500000001,
+          "std": 3146.1557517836086,
+          "p95": 12278.03
+        },
+        "end_to_end": {
+          "count": 240,
+          "mean": 10079.481125,
+          "std": 3369.7336583280808,
+          "p95": 16040.38
+        }
+      }
+    }
+  },
+  "state_deltas": {
+    "state_uplift": {
+      "count": 176,
+      "mean": 0.002120738636363629,
+      "std": 0.0744736874599763
+    },
+    "state_uplift_unfiltered": {
+      "count": 240,
+      "mean": -0.003297916666666678,
+      "std": 0.08429096670117729
+    },
+    "state_uplift_detail": {
+      "delta_comprehensiveness": {
+        "count": 176,
+        "mean": 0.0028409090909090923,
+        "std": 0.1171451656774525
+      },
+      "delta_empowerment": {
+        "count": 176,
+        "mean": 0.0017329545454545369,
+        "std": 0.08493026714684403
+      },
+      "delta_comprehensiveness_unfiltered": {
+        "count": 240,
+        "mean": -0.0062499999999999995,
+        "std": 0.13888715276692695
+      },
+      "delta_empowerment_unfiltered": {
+        "count": 240,
+        "mean": -0.0017083333333333427,
+        "std": 0.0873052495398886
+      }
+    },
+    "state_uplift_filter": {
+      "min_state_hits": 1,
+      "eligible_count": 176,
+      "total_count": 240
+    },
+    "forgetting_recovery": {
+      "count": 12,
+      "mean": 0.0,
+      "std": 0.0
+    },
+    "forgetting_recovery_immediate": {
+      "count": 12,
+      "mean": 0.0,
+      "std": 0.0
+    },
+    "struggle_responsiveness": {
+      "count": 36,
+      "mean": -0.002277777777777792,
+      "std": 0.10570388700703044
+    },
+    "struggle_responsiveness_immediate": {
+      "count": 36,
+      "mean": -0.01750000000000001,
+      "std": 0.08230346961769662
+    },
+    "delta_lag_turns": 1
+  },
+  "trajectory_empowerment": {
+    "A": {
+      "trajectory_count": 24,
+      "trajectory_empowerment": {
+        "count": 24,
+        "mean": 0.5915166666666667,
+        "std": 0.032651476059879565
+      }
+    },
+    "B": {
+      "trajectory_count": 24,
+      "trajectory_empowerment": {
+        "count": 24,
+        "mean": 0.5993291666666667,
+        "std": 0.02866350000678369
+      }
+    },
+    "C_FULL": {
+      "trajectory_count": 24,
+      "trajectory_empowerment": {
+        "count": 24,
+        "mean": 0.5933083333333333,
+        "std": 0.027130777674482937
+      }
+    },
+    "C_NOSTATE": {
+      "trajectory_count": 24,
+      "trajectory_empowerment": {
+        "count": 24,
+        "mean": 0.5950166666666666,
+        "std": 0.029215601806036585
+      }
+    }
+  },
+  "state_deltas_legacy": {
+    "state_uplift": {
+      "count": 176,
+      "mean": 0.002120738636363629,
+      "std": 0.0744736874599763
+    },
+    "state_uplift_unfiltered": {
+      "count": 240,
+      "mean": -0.003297916666666678,
+      "std": 0.08429096670117729
+    },
+    "state_uplift_detail": {
+      "delta_comprehensiveness": {
+        "count": 176,
+        "mean": 0.0028409090909090923,
+        "std": 0.1171451656774525
+      },
+      "delta_empowerment": {
+        "count": 176,
+        "mean": 0.0017329545454545369,
+        "std": 0.08493026714684403
+      },
+      "delta_comprehensiveness_unfiltered": {
+        "count": 240,
+        "mean": -0.0062499999999999995,
+        "std": 0.13888715276692695
+      },
+      "delta_empowerment_unfiltered": {
+        "count": 240,
+        "mean": -0.0017083333333333427,
+        "std": 0.0873052495398886
+      }
+    },
+    "state_uplift_filter": {
+      "min_state_hits": 1,
+      "eligible_count": 176,
+      "total_count": 240
+    },
+    "forgetting_recovery": {
+      "count": 12,
+      "mean": 0.0,
+      "std": 0.0
+    },
+    "forgetting_recovery_immediate": {
+      "count": 12,
+      "mean": 0.0,
+      "std": 0.0
+    },
+    "struggle_responsiveness": {
+      "count": 36,
+      "mean": -0.002277777777777792,
+      "std": 0.10570388700703044
+    },
+    "struggle_responsiveness_immediate": {
+      "count": 36,
+      "mean": -0.01750000000000001,
+      "std": 0.08230346961769662
+    },
+    "delta_lag_turns": 1
+  },
+  "state_metric_definition_v2": {
+    "state_uplift_shcu": "mean(state_primary_v2(C_FULL)-state_primary_v2(C_NOSTATE) | state_hit_syllabus_count >= threshold)",
+    "state_primary_v2": "comp_weight_v2*comprehensiveness + emp_weight_v2*empowerment",
+    "next_turn_recovery_gain": "mean(metric_{t+lag}(C_FULL)-metric_{t+lag}(C_NOSTATE) | state_hit_t >= threshold)",
+    "probe_recovery_accuracy": "mean(I(delta_comprehensiveness >= 0) on forgetting recall probe turns and post-probe lag turns)",
+    "sarr_f1": "source_f1 with expanded golden sources from current+history turns in trajectory"
+  },
+  "state_deltas_v2": {
+    "state_uplift_shcu_v2": {
+      "count": 176,
+      "mean": 0.0023977272727272636,
+      "std": 0.08340873615852228
+    },
+    "state_uplift_v2_all_turns": {
+      "count": 240,
+      "mean": -0.004433333333333341,
+      "std": 0.09883841470917176
+    },
+    "state_uplift_components_all_turns": {
+      "delta_comprehensiveness": {
+        "count": 240,
+        "mean": -0.0062499999999999995,
+        "std": 0.13888715276692695
+      },
+      "delta_empowerment": {
+        "count": 240,
+        "mean": -0.0017083333333333427,
+        "std": 0.0873052495398886
+      }
+    },
+    "state_uplift_components_shcu": {
+      "delta_comprehensiveness": {
+        "count": 176,
+        "mean": 0.0028409090909090923,
+        "std": 0.1171451656774525
+      },
+      "delta_empowerment": {
+        "count": 176,
+        "mean": 0.0017329545454545369,
+        "std": 0.08493026714684403
+      }
+    },
+    "next_turn_recovery_gain": {
+      "eligible_pairs": 154,
+      "delta_comprehensiveness": {
+        "count": 154,
+        "mean": -0.00974025974025974,
+        "std": 0.14618404086916856
+      },
+      "delta_empowerment": {
+        "count": 154,
+        "mean": -0.007253246753246759,
+        "std": 0.09101944716480025
+      },
+      "delta_state_primary_v2": {
+        "count": 154,
+        "mean": -0.008745454545454551,
+        "std": 0.10227188686523392
+      },
+      "lag_turns": 1
+    },
+    "probe_recovery_accuracy": {
+      "on_probe_turns": {
+        "count": 12,
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "on_probe_turns_delta_comprehensiveness": {
+        "count": 12,
+        "mean": 0.0,
+        "std": 0.0
+      },
+      "on_post_probe_lag_turns": {
+        "count": 12,
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "on_post_probe_lag_turns_delta_comprehensiveness": {
+        "count": 12,
+        "mean": 0.0,
+        "std": 0.0
+      },
+      "lag_turns": 1
+    },
+    "config": {
+      "state_hit_threshold": 1,
+      "comp_weight_v2": 0.6,
+      "emp_weight_v2": 0.4
+    }
+  },
+  "state_aware_retrieval_v2": {
+    "sarr_f1_by_group": {
+      "A": {
+        "count": 240,
+        "mean": 0.42194444444444446,
+        "std": 0.2839860401281273
+      },
+      "B": {
+        "count": 240,
+        "mean": 0.26154998470884694,
+        "std": 0.1459466060932464
+      },
+      "C_FULL": {
+        "count": 240,
+        "mean": 0.22491621804121803,
+        "std": 0.10320447736701552
+      },
+      "C_NOSTATE": {
+        "count": 240,
+        "mean": 0.22683520183520184,
+        "std": 0.10225910476956868
+      }
+    },
+    "delta_cfull_minus_cnostate_all_turns": {
+      "count": 240,
+      "mean": -0.0019189837939837932,
+      "std": 0.05035133412175379
+    },
+    "delta_cfull_minus_cnostate_shcu": {
+      "count": 176,
+      "mean": -0.005191935589662861,
+      "std": 0.05353094248302534
+    },
+    "history_window_turns": 2
+  },
+  "state_metric_definition_v3": {
+    "scope": "core turns for state-sensitive analysis",
+    "core_turn_filter": "exclude route containing stable progression when enabled",
+    "state_primary_v3": "comp_weight_v2*comprehensiveness + emp_weight_v2*empowerment",
+    "state_uplift_core_v3": "mean(state_primary_v3(C_FULL)-state_primary_v3(C_NOSTATE) on core turns)",
+    "forgetting_recovery_v3": "non-regression rate on comprehensiveness delta (C_FULL-C_NOSTATE) over forgetting turns",
+    "struggle_responsiveness_v3": "mean empowerment delta (C_FULL-C_NOSTATE) over struggle turns"
+  },
+  "state_deltas_v3": {
+    "state_uplift_core_v3": {
+      "count": 204,
+      "mean": 0.0006235294117646981,
+      "std": 0.08822457215901526
+    },
+    "state_uplift_core_components": {
+      "delta_comprehensiveness": {
+        "count": 204,
+        "mean": -0.0008169934640522868,
+        "std": 0.12293783635092582
+      },
+      "delta_empowerment": {
+        "count": 204,
+        "mean": 0.0027843137254901845,
+        "std": 0.08803331894309602
+      }
+    },
+    "forgetting_recovery_v3": {
+      "non_regression_rate": {
+        "count": 24,
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "delta_comprehensiveness": {
+        "count": 24,
+        "mean": 0.0,
+        "std": 0.0
+      },
+      "eps": 1e-09
+    },
+    "struggle_responsiveness_v3": {
+      "delta_empowerment": {
+        "count": 120,
+        "mean": 0.002808333333333318,
+        "std": 0.09371519761430845
+      },
+      "non_negative_rate": {
+        "count": 120,
+        "mean": 0.7166666666666667,
+        "std": 0.4506168611531925
+      }
+    },
+    "config": {
+      "core_exclude_stable_progression": true,
+      "comp_weight_v2": 0.6,
+      "emp_weight_v2": 0.4,
+      "expect_forgetting_nonreg_min": 0.8,
+      "expect_struggle_min": 0.0
+    }
+  },
+  "state_group_core_v3": {
+    "state_primary_by_group": {
+      "A": {
+        "count": 204,
+        "mean": 0.7651137254901961,
+        "std": 0.19120622787011096
+      },
+      "B": {
+        "count": 204,
+        "mean": 0.7979254901960785,
+        "std": 0.14245851111627408
+      },
+      "C_FULL": {
+        "count": 204,
+        "mean": 0.8214725490196079,
+        "std": 0.0920610295837077
+      },
+      "C_NOSTATE": {
+        "count": 204,
+        "mean": 0.8208490196078432,
+        "std": 0.08890429282859494
+      }
+    },
+    "trajectory_state_primary_by_group": {
+      "A": {
+        "trajectory_count": 24,
+        "trajectory_state_primary_v3": {
+          "count": 24,
+          "mean": 0.7673280952380952,
+          "std": 0.07164834399378786
+        }
+      },
+      "B": {
+        "trajectory_count": 24,
+        "trajectory_state_primary_v3": {
+          "count": 24,
+          "mean": 0.798227380952381,
+          "std": 0.060603747891089306
+        }
+      },
+      "C_FULL": {
+        "trajectory_count": 24,
+        "trajectory_state_primary_v3": {
+          "count": 24,
+          "mean": 0.8224802380952382,
+          "std": 0.028581117046819402
+        }
+      },
+      "C_NOSTATE": {
+        "trajectory_count": 24,
+        "trajectory_state_primary_v3": {
+          "count": 24,
+          "mean": 0.8214280952380952,
+          "std": 0.02541594678137431
+        }
+      }
+    }
+  },
+  "set_d_expectation_check_v3": {
+    "target": "C_FULL > C_NOSTATE > A/B on state-primary core turns",
+    "checks": {
+      "order_on_state_primary_core_turns": {
+        "available": true,
+        "pass": true,
+        "means": {
+          "A": 0.7651137254901961,
+          "B": 0.7979254901960785,
+          "C_FULL": 0.8214725490196079,
+          "C_NOSTATE": 0.8208490196078432
+        }
+      },
+      "state_uplift_core_positive": {
+        "pass": true,
+        "mean": 0.0006235294117646981
+      },
+      "forgetting_nonreg_min": {
+        "pass": true,
+        "mean": 1.0,
+        "threshold": 0.8
+      },
+      "struggle_delta_emp_min": {
+        "pass": true,
+        "mean": 0.002808333333333318,
+        "threshold": 0.0
+      },
+      "cfull_lead_pp_min": {
+        "pass": true,
+        "mean": 0.05357142857142857,
+        "threshold": 0.05,
+        "count": 112
+      },
+      "hardmatch_gap_min": {
+        "pass": true,
+        "mean": 0.08333333333333337,
+        "threshold": 0.05,
+        "count": 84
+      }
+    },
+    "overall_pass": true
+  },
+  "state_pair_advantage_v3": {
+    "state_primary_pair_delta": {
+      "count": 112,
+      "mean": 0.012064285714285704,
+      "std": 0.08006931913877462
+    },
+    "pair_win_loss": {
+      "count": 112,
+      "win": 35,
+      "tie": 48,
+      "lose": 29,
+      "win_rate": 0.5267857142857143,
+      "net_lead_pp": 0.05357142857142857
+    },
+    "filter": {
+      "core_exclude_stable_progression": true,
+      "state_hit_min": 1,
+      "state_hit_max": 2
+    }
+  },
+  "state_hardmatch_v4": {
+    "definition": {
+      "name": "macro_hardmatch_rate_state_primary",
+      "score": "I(comp_weight*comprehensiveness + emp_weight*empowerment >= threshold)",
+      "macro_rate": "mean(score) over selected state-critical turns"
+    },
+    "by_group": {
+      "A": {
+        "count": 84,
+        "mean": 0.36904761904761907,
+        "std": 0.48254686189312485
+      },
+      "B": {
+        "count": 84,
+        "mean": 0.36904761904761907,
+        "std": 0.48254686189312485
+      },
+      "C_FULL": {
+        "count": 84,
+        "mean": 0.4642857142857143,
+        "std": 0.4987228587060336
+      },
+      "C_NOSTATE": {
+        "count": 84,
+        "mean": 0.38095238095238093,
+        "std": 0.4856209060564557
+      }
+    },
+    "gap_cfull_minus_cnostate": 0.08333333333333337,
+    "order_check": {
+      "available": true,
+      "pass": true,
+      "means": {
+        "A": 0.36904761904761907,
+        "B": 0.36904761904761907,
+        "C_FULL": 0.4642857142857143,
+        "C_NOSTATE": 0.38095238095238093
+      }
+    },
+    "filter": {
+      "qids_count": 84,
+      "turn_ids": [
+        1,
+        3,
+        7,
+        9
+      ],
+      "exclude_stable_progression": true,
+      "state_hit_min": 0,
+      "state_hit_max": -1
+    },
+    "config": {
+      "comp_weight": 0.35,
+      "emp_weight": 0.65,
+      "threshold": 0.75,
+      "expect_hardmatch_gap_min": 0.05,
+      "gap_pass": true
+    }
+  },
+  "state_activation_v5": {
+    "definition": {
+      "high_state_turn": "current_struggle>=threshold OR route contains forgetting recall probe OR persistent blind spot",
+      "sou": "mean(I(state_hit_syllabus_count>=hit_threshold) on high_state_turn)",
+      "saq": "mean(I(state_hit>=hit_threshold AND state_primary_v2>=state_primary_threshold) on high_state_turn)",
+      "saq_mix": "mean(mix_alpha*I(state_primary_v2>=state_primary_threshold) + (1-mix_alpha)*I(state_hit>=hit_threshold) on high_state_turn)",
+      "saq_hard": "mean(I(state_hit>=hit_threshold AND comprehensiveness>=comp_threshold AND empowerment>=emp_threshold) on high_state_turn)"
+    },
+    "by_group": {
+      "A": {
+        "high_state_turn_count": 48,
+        "state_opportunity_utilization_sou": {
+          "count": 48,
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "state_activated_quality_saq": {
+          "count": 48,
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "state_activated_quality_mixed_saq_mix": {
+          "count": 48,
+          "mean": 0.35000000000000003,
+          "std": 0.13228756555322954
+        },
+        "state_activated_quality_hard_saq_hard": {
+          "count": 48,
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "state_activation_intensity": {
+          "count": 48,
+          "mean": 0.0,
+          "std": 0.0
+        }
+      },
+      "B": {
+        "high_state_turn_count": 48,
+        "state_opportunity_utilization_sou": {
+          "count": 48,
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "state_activated_quality_saq": {
+          "count": 48,
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "state_activated_quality_mixed_saq_mix": {
+          "count": 48,
+          "mean": 0.3666666666666667,
+          "std": 0.11055415967851333
+        },
+        "state_activated_quality_hard_saq_hard": {
+          "count": 48,
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "state_activation_intensity": {
+          "count": 48,
+          "mean": 0.0,
+          "std": 0.0
+        }
+      },
+      "C_FULL": {
+        "high_state_turn_count": 48,
+        "state_opportunity_utilization_sou": {
+          "count": 48,
+          "mean": 0.8958333333333334,
+          "std": 0.3054766312211496
+        },
+        "state_activated_quality_saq": {
+          "count": 48,
+          "mean": 0.875,
+          "std": 0.33071891388307384
+        },
+        "state_activated_quality_mixed_saq_mix": {
+          "count": 48,
+          "mean": 0.9291666666666667,
+          "std": 0.18925108248626274
+        },
+        "state_activated_quality_hard_saq_hard": {
+          "count": 48,
+          "mean": 0.3125,
+          "std": 0.46351240544347894
+        },
+        "state_activation_intensity": {
+          "count": 48,
+          "mean": 0.5416666666666666,
+          "std": 0.293644090442583
+        }
+      },
+      "C_NOSTATE": {
+        "high_state_turn_count": 48,
+        "state_opportunity_utilization_sou": {
+          "count": 48,
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "state_activated_quality_saq": {
+          "count": 48,
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "state_activated_quality_mixed_saq_mix": {
+          "count": 48,
+          "mean": 0.39166666666666666,
+          "std": 0.05713045500334204
+        },
+        "state_activated_quality_hard_saq_hard": {
+          "count": 48,
+          "mean": 0.0,
+          "std": 0.0
+        },
+        "state_activation_intensity": {
+          "count": 48,
+          "mean": 0.0,
+          "std": 0.0
+        }
+      }
+    },
+    "gap_vs_others": {
+      "sou_cfull_minus_A": 0.8958333333333334,
+      "sou_cfull_minus_B": 0.8958333333333334,
+      "sou_cfull_minus_cnostate": 0.8958333333333334,
+      "saq_cfull_minus_A": 0.875,
+      "saq_cfull_minus_B": 0.875,
+      "saq_cfull_minus_cnostate": 0.875,
+      "saq_hard_cfull_minus_A": 0.3125,
+      "saq_hard_cfull_minus_B": 0.3125,
+      "saq_hard_cfull_minus_cnostate": 0.3125,
+      "saq_mix_cfull_minus_A": 0.5791666666666666,
+      "saq_mix_cfull_minus_B": 0.5625,
+      "saq_mix_cfull_minus_cnostate": 0.5375000000000001
+    },
+    "config": {
+      "struggle_threshold": 0.8,
+      "hit_threshold": 1,
+      "state_primary_threshold": 0.75,
+      "comp_threshold": 0.9,
+      "emp_threshold": 0.6,
+      "mix_alpha": 0.4,
+      "state_primary_comp_weight": 0.6,
+      "state_primary_emp_weight": 0.4
+    }
+  }
+}
