@@ -173,7 +173,7 @@ class SmartRAGRetriever:
 if __name__ == "__main__":
     NEO4J_URI = "neo4j://127.0.0.1:7687"
     NEO4J_USER = "neo4j"
-    NEO4J_PASSWORD = "12345678"
+    NEO4J_PASSWORD = "YOUR VALUE"
 
     # 确保安装了 Ollama 并且运行过 `ollama run qwen2`
     searcher = SmartRAGRetriever(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD, llm_model="qwen2")

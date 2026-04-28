@@ -161,7 +161,7 @@ if __name__ == "__main__":
     runtime_cfg = load_runtime_config(
         default_uri="bolt://localhost:7687",
         default_user="neo4j",
-        default_password="12345678",
+        default_password="YOUR VALUE",
     )
 
     # Update this to your actual root dataset directory

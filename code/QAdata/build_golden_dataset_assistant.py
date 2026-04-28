@@ -86,7 +86,7 @@ def generate_annotation_task():
     runtime_cfg = load_runtime_config(
         default_uri="bolt://localhost:7687",
         default_user="neo4j",
-        default_password="12345678",
+        default_password="YOUR VALUE",
     )
     index_name = GROUP_RESOURCE_NAMES["A"]["index_name"]
     assistant = AnnotationAssistant(

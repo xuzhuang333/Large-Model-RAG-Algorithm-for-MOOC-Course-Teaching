@@ -564,7 +564,7 @@ def run_group_c_static_foundation() -> None:
     runtime_cfg = load_runtime_config(
         default_uri="bolt://localhost:7687",
         default_user="neo4j",
-        default_password="12345678",
+        default_password="YOUR VALUE",
         default_llm_api_base=cfg.summary_api_base,
     )
 

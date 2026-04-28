@@ -406,7 +406,7 @@
     ],
     "retrieval_elapsed_ms": 2627,
     "generation_elapsed_ms": 15673,
-    "llm_model": "ep-20260327213054-gpbl2",
+    "llm_model": "YOUR LLM VALUE",
     "llm_temperature": 0.3,
     "llm_max_tokens": 520
   },
@@ -794,7 +794,7 @@
     ],
     "retrieval_elapsed_ms": 74,
     "generation_elapsed_ms": 21795,
-    "llm_model": "ep-20260327213054-gpbl2",
+    "llm_model": "YOUR LLM VALUE",
     "llm_temperature": 0.3,
     "llm_max_tokens": 520
   },
@@ -1182,7 +1182,7 @@
     ],
     "retrieval_elapsed_ms": 59,
     "generation_elapsed_ms": 20342,
-    "llm_model": "ep-20260327213054-gpbl2",
+    "llm_model": "YOUR LLM VALUE",
     "llm_temperature": 0.3,
     "llm_max_tokens": 520
   }

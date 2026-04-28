@@ -552,7 +552,7 @@ class SetAEvaluatorRunner:
         runtime_cfg = load_runtime_config(
             default_uri="bolt://localhost:7687",
             default_user="neo4j",
-            default_password="12345678",
+            default_password="YOUR VALUE",
             default_llm_api_base=DEFAULT_ARK_API_BASE,
         )
 

@@ -106,7 +106,7 @@ class XMindPatcher:
 if __name__ == "__main__":
     NEO4J_URI = "bolt://localhost:7687"
     NEO4J_USER = "neo4j"
-    NEO4J_PASSWORD = "12345678"  # 改为你的密码
+    NEO4J_PASSWORD = "YOUR VALUE"  # 改为 YOUR VALUE
 
     patcher = XMindPatcher(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
 

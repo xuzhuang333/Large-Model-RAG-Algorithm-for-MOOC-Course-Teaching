@@ -297,7 +297,7 @@ def main() -> None:
     runtime_cfg = load_runtime_config(
         default_uri="bolt://localhost:7687",
         default_user="neo4j",
-        default_password="12345678",
+        default_password="YOUR VALUE",
     )
     indexing_cfg = build_config_from_env()
     embedding_model_name = os.getenv("GROUP_B_EMBEDDING_MODEL", "BAAI/bge-small-zh-v1.5")

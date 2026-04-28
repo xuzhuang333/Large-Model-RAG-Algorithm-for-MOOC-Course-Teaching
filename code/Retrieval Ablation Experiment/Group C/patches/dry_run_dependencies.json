@@ -5,7 +5,7 @@
     "global_anchor_layer": 2,
     "llm_score_threshold": 6,
     "cognitive_decay_threshold": 33,
-    "llm_model": "ep-20260327213054-gpbl2",
+    "llm_model": "YOUR LLM VALUE",
     "node_count": 211,
     "cleared_existing_edges": 0,
     "written_requires": 13,

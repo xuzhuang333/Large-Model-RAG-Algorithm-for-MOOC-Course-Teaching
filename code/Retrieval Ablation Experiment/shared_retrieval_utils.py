@@ -7,9 +7,9 @@ import requests
 
 logger = logging.getLogger("Shared_Retrieval_Utils")
 
-DEFAULT_ARK_API_BASE = "https://ark.cn-beijing.volces.com/api/v3"
-DEFAULT_DEEPSEEK_ENDPOINT = "ep-20260327213054-gpbl2"
-DEFAULT_DOUBAO_ENDPOINT = "ep-20260327213159-fxxcc"
+DEFAULT_ARK_API_BASE = "YOUR LLM VALUE"
+DEFAULT_DEEPSEEK_ENDPOINT = "YOUR LLM VALUE"
+DEFAULT_DOUBAO_ENDPOINT = "YOUR LLM VALUE"
 
 
 @dataclass
@@ -173,7 +173,7 @@ class RuntimeConfig:
 def load_runtime_config(
     default_uri: str = "bolt://localhost:7687",
     default_user: str = "neo4j",
-    default_password: str = "12345678",
+    default_password: str = "YOUR VALUE",
     default_llm_api_base: str = DEFAULT_ARK_API_BASE,
 ) -> RuntimeConfig:
     """

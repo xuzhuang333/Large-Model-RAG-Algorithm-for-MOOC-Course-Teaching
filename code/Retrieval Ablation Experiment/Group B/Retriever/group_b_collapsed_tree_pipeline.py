@@ -287,7 +287,7 @@ def run_group_b_collapsed_tree_pipeline() -> None:
     runtime_cfg = load_runtime_config(
         default_uri="bolt://localhost:7687",
         default_user="neo4j",
-        default_password="12345678",
+        default_password="YOUR VALUE",
         default_llm_api_base=cfg.llm_api_base,
     )
 

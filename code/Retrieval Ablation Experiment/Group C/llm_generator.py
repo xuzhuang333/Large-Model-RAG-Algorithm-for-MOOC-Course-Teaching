@@ -24,7 +24,7 @@ class RAGGenerator:
     def __init__(self, model_name=DEFAULT_DEEPSEEK_ENDPOINT, api_url=DEFAULT_ARK_API_BASE, api_key=None):
         # 仅使用云端模型接入点（Endpoint ID）
         self.model_name = model_name
-        # 兼容旧参数名 api_url，这里实际表示 API Base（例如 https://ark.cn-beijing.volces.com/api/v3）
+        # 兼容旧参数名 api_url，这里实际表示 API Base（例如 YOUR LLM VALUE）
         self.api_url = api_url
         # 上下文长度控制：默认 2000 字符，可由环境变量调整
         self.max_context_length = int(os.getenv("A_CONTEXT_MAX_CHARS", "2000"))

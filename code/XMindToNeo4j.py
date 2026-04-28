@@ -116,7 +116,7 @@ class GlobalHierarchyIndexer:
 if __name__ == "__main__":
     NEO4J_URI = "bolt://localhost:7687"
     NEO4J_USER = "neo4j"
-    NEO4J_PASSWORD = "12345678"  # 替换为实际密码
+    NEO4J_PASSWORD = "YOUR VALUE"  # 替换为 YOUR VALUE
 
     ROOT_DATA_DIR = r"E:\graduate_project\reference material"
 

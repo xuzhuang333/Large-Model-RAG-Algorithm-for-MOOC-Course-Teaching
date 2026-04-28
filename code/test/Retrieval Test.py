@@ -77,7 +77,7 @@ if __name__ == "__main__":
     # Update with your Neo4j credentials
     NEO4J_URI = "neo4j://127.0.0.1:7687"
     NEO4J_USER = "neo4j"
-    NEO4J_PASSWORD = "12345678"  # 替换为你设置的密码
+    NEO4J_PASSWORD = "YOUR VALUE"  # 替换为 YOUR VALUE
 
     retriever = KnowledgeRetriever(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
 
